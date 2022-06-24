@@ -18,5 +18,8 @@ describe("Escrow", async () => {
     expect(this.escrow.address).to.not.be.undefined;
     expect(this.escrow.address).to.not.be.null;
   }); 
+
+  // it("should have a default owner", async function () {
+
   
 });

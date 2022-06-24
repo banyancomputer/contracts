@@ -30,6 +30,8 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder
     struct OfferCounterpart {
         address contractAddr;
         bytes32 proof;
+        uint256 idAsset;
+        uint256 amount;
         OfferType offerorType;
         UserStatus offerorStatus;
     }
@@ -51,7 +53,63 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder
         _openOfferAcc = 0;
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
+        _offerId = 0;
     }
+
+     function startOffer( address[] memory creatorTokenAddress, uint256[] memory creatorTokenId, uint256[] memory creatorAmount, uint8[]  memory creatorTokenType,
+                         address  executerAddress , address[] memory executorTokenAddress, uint256[] memory executorTokenId, uint256[] memory executorAmount, uint8[] memory executorTokenType  )  public returns(uint256)
+    {
+        require(executerAddress != address(0), 'EXECUTER_ADDRESS_NOT_VALID' );
+        require(creatorTokenAddress.length == creatorTokenId.length && creatorTokenAddress.length ==  creatorAmount.length 
+                 && creatorTokenAddress.length == creatorTokenType.length , 'CREATOR_PARMS_LEN_ERROR');
+        require(executorTokenAddress.length == executorTokenId.length && executorTokenAddress.length ==  executorAmount.length 
+                 && executorTokenAddress.length == executorTokenType.length , 'EXECUTER_PARMS_LEN_ERROR');
+
+        _offerId++;
+        _transactions[_offerId].id = _offerId;
+        _transactions[_offerId].creator = msg.sender;
+        _transactions[_offerId].executor = executerAddress;
+        for (uint256 i = 0; i < creatorTokenAddress.length; i++) 
+        {
+            verifyOfferIntegrity(creatorTokenAddress[i], creatorTokenId[i], creatorAmount[i], creatorTokenType[i] );
+            if(OfferType(creatorTokenType[i]) == OfferType.ERC20){
+                verifyERC20(msg.sender, creatorTokenAddress[i], creatorAmount[i]);
+            }else if(OfferType(creatorTokenType[i]) == OfferType.ERC721){
+                verifyERC721(msg.sender, creatorTokenAddress[i], creatorTokenId[i]);
+            }else if(OfferType(creatorTokenType[i]) == OfferType.ERC1155){
+                verifyERC1155(msg.sender, creatorTokenAddress[i], creatorAmount[i], creatorTokenId[i]);
+            }
+            _transactions[_offerId]._offerors[msg.sender].tokenAddressIdx.push(i+1);
+            _transactions[_offerId]._offerors[msg.sender]._counterpart[i+1].contractAddr = creatorTokenAddress[i];
+            _transactions[_offerId]._offerors[msg.sender]._counterpart[i+1].idAsset = creatorTokenId[i];
+            _transactions[_offerId]._offerors[msg.sender]._counterpart[i+1].amount  = creatorAmount[i];
+            _transactions[_offerId]._offerors[msg.sender]._counterpart[i+1].offerorType = OfferType(creatorTokenType[i]);
+            _transactions[_offerId]._offerors[msg.sender]._counterpart[i+1].offerorStatus = UserStatus.OPEN;
+        }
+        for (uint i = 0; i < executorTokenAddress.length; i++) 
+        {
+            verifyOfferIntegrity(executorTokenAddress[i], executorTokenId[i], executorAmount[i], executorTokenType[i] );
+            if(OfferType(executorTokenType[i]) == OfferType.ERC20){
+                verifyERC20(executerAddress, executorTokenAddress[i], executorAmount[i]);
+            }else if(OfferType(executorTokenType[i]) == OfferType.ERC721){
+                verifyERC721(executerAddress, executorTokenAddress[i], executorTokenId[i]);
+            }else if(OfferType(executorTokenType[i]) == OfferType.ERC1155){
+                verifyERC1155(executerAddress, executorTokenAddress[i], executorAmount[i], executorTokenId[i]);
+            }
+            _transactions[_offerId]._offerors[executerAddress].tokenAddressIdx.push(i+1);
+            _transactions[_offerId]._offerors[executerAddress]._counterpart[i+1].contractAddr = executorTokenAddress[i];
+            _transactions[_offerId]._offerors[executerAddress]._counterpart[i+1].idAsset = executorTokenId[i];
+            _transactions[_offerId]._offerors[executerAddress]._counterpart[i+1].amount  = executorAmount[i];
+            _transactions[_offerId]._offerors[executerAddress]._counterpart[i+1].offerorType = OfferType(executorTokenType[i]);
+            _transactions[_offerId]._offerors[executerAddress]._counterpart[i+1].offerorStatus = UserStatus.OPEN;
+        }
+        _transactions[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
+        _openOffers[msg.sender].push(_offerId);
+        _openOffers[executerAddress].push(_offerId);
+        emit NewOffer(msg.sender, executerAddress, _offerId );
+        return _offerId;
+    }
+
     function cancelOffer(uint256 offerId) public  returns (bool)
     {
         Offer storage store = _transactions[offerId];
