@@ -7,14 +7,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
+    const authorityDeployment = await deployments.get(CONTRACTS.authority);
+
     await deploy(CONTRACTS.escrow, {
         from: deployer,
-        args: [],
+        args: [authorityDeployment.address],
         log: true,
         skipIfAlreadyDeployed: true,
     });
 };
 
 func.tags = [CONTRACTS.escrow];
+func.dependencies = [CONTRACTS.authority];
 
 export default func;

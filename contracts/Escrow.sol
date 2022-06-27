@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "./types/AccessControlled.sol";
 
-contract Escrow is Context, ERC1155Holder, ERC721Holder
+contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
 {
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer( address indexed executor, uint256 offerId);
@@ -48,8 +49,9 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder
          uint256[] tokenAddressIdx;
          mapping(uint256 => OfferCounterpart ) _counterpart;
     }
-    constructor()
+    constructor(address _authority) AccessControlled(IAuthority(_authority))
     {
+        require(_authority != address(0));
         _openOfferAcc = 0;
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
