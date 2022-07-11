@@ -21,6 +21,7 @@ dotenvConfig({ path: resolve(__dirname, "./.env") });
 const DATAHUB_API_KEY = process.env.DATAHUB_API_KEY;
 const FUJI_PRIVATE_KEY = process.env.FUJI_PRIVATE_KEY;
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const COINMARKETCAP_API_KEY = process.env.COINMARKETCAP_API_KEY;
 
 const chainIds = {
   goerli: 5,
@@ -95,6 +96,7 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: [],
     src: "./contracts",
+    coinmarketcap: COINMARKETCAP_API_KEY,
   },
 
   etherscan: {
