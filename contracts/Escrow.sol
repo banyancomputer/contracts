@@ -42,6 +42,7 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
         uint256 id;
         mapping(address => OfferUser) _offerors;
         string file;
+        string description;
         OfferStatus offerStatus;
     }
     struct OfferUser 
@@ -59,7 +60,7 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
     }
 
      function startOffer( address[] memory creatorTokenAddress, uint256[] memory creatorTokenId, uint256[] memory creatorAmount, uint8[]  memory creatorTokenType,
-                         address  executerAddress , address[] memory executorTokenAddress, uint256[] memory executorTokenId, uint256[] memory executorAmount, uint8[] memory executorTokenType  )  public returns(uint256)
+                         address  executerAddress , address[] memory executorTokenAddress, uint256[] memory executorTokenId, uint256[] memory executorAmount, uint8[] memory executorTokenType  ) public returns(uint256)
     {
         require(executerAddress != address(0), 'EXECUTER_ADDRESS_NOT_VALID' );
         require(creatorTokenAddress.length == creatorTokenId.length && creatorTokenAddress.length ==  creatorAmount.length 
@@ -125,6 +126,7 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
         Offer storage store = _transactions[offerId];
         return (store.creator, store.executor, uint8(store.offerStatus), store.file);
     }
+    
     function getOffer(uint256 offerId, address userWallet) public view returns (address[] memory, bytes32[] memory, uint8[] memory )
     {
         Offer storage store = _transactions[offerId];
