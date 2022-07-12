@@ -1,5 +1,6 @@
 import { Authority } from '../types/contracts/Authority';
 import { ERC20Mock } from '../types/contracts/mocks/ERC20Mock';
+import { EscrowInterface } from '../types/contracts/Escrow';
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
@@ -12,6 +13,9 @@ describe("Escrow", async () => {
     [ this.owner, this.executor ] = await ethers.getSigners();
     this.ownerAddress = await this.owner.getAddress();
     this.executorAddress = await this.executor.getAddress();
+
+    const abiEscrow = require('../artifacts/contracts/Escrow.sol/Escrow.json').abi;
+    this.EscrowInterface = new ethers.utils.Interface(abiEscrow);
   });
 
   beforeEach(async function () {
@@ -51,22 +55,31 @@ describe("Escrow", async () => {
 
   it("should start an offer", async function () {
     
-    const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
+    // const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
     const offer = await this.escrow.startOffer(...this.offerParams);
-    await offer.wait();
+    const offerTx = await offer.wait();
+
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+    const offerId = offerResult[0].toNumber();
 
     expect(offerId).to.equal(1);
     expect((await this.escrow.offerPerUser(this.ownerAddress))[0]).to.equal(offerId);
   });
 
   it("should cancel an offer", async function () {
-      const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
+      // const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
       const offer = await this.escrow.startOffer(...this.offerParams);
-      await offer.wait();
-      const cancelOfferOutcome = await this.escrow.callStatic.cancelOffer(offerId);
+      const offerTx = await offer.wait();
+      const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+      const offerId = offerResult[0].toNumber();
+      
       const cancelOffer = await this.escrow.cancelOffer(offerId);
-      await cancelOffer.wait();
-      expect(cancelOfferOutcome).to.equal(true);
+      const cancelOfferTx = await cancelOffer.wait();
+
+      const cancelOfferResult = await this.EscrowInterface.decodeFunctionResult("cancelOffer", cancelOfferTx.logs[0].data);
+      const cancelOfferBoolean = cancelOfferResult[0];
+
+      expect(cancelOfferBoolean).to.equal(true);
       expect((await this.escrow['getOffer(uint256)'](offerId))[2]).to.equal(3); // return array position 2 is status and OfferStatus.Cancelled = 3
   });
 
