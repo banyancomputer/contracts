@@ -12,8 +12,9 @@ import "./types/AccessControlled.sol";
 contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
 {
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
-    event FinishOffer( address indexed executor, uint256 offerId);
+    event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
+    event OfferCancelled(address indexed requester, uint256 offerId);
 
     uint256 private _offerId;
     string private _symbol;
@@ -119,6 +120,7 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
         require(store.offerStatus == OfferStatus.OFFER_CREATED, 'ERROR: OFFER_STATUS ISNT CREATED');
         require(store.executor == msg.sender || store.creator == msg.sender , 'ERROR: EXECUTER ISNT CREATOR OR EXECUTER');
         _transactions[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
+        emit OfferCancelled(msg.sender, offerId);
         return true;
     }
     function getOffer(uint256 offerId) public view returns (address, address, uint8, string memory)
