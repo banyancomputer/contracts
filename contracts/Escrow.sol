@@ -167,7 +167,7 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
     {
         require(tokenAddress != address(0), 'ERROR: CREATOR_CONTRACT_NOT_VALID' );
         require(tokenType >=0 && tokenType <= uint8(OfferType.NATIVE)  , 'ERROR: NOT_VALID_OFFER_TYPE');
-        require(tokenId > 0  , 'ERROR: TOKENID_MUST_POSITIVE');
+        require(tokenId >= 0  , 'ERROR: TOKENID_MUST_POSITIVE');
         require(amount > 0  , 'ERROR: AMOUNT_MUST_POSITIVE');
         return true;
     }
