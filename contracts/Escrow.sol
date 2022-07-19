@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "./types/AccessControlled.sol";
+import "./interfaces/ITreasury.sol";
 
 contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
 {
