@@ -1,0 +1,649 @@
+{
+  "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_governor",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_guardian",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_policy",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_vault",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "UNAUTHORIZED",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "contract IAuthority",
+          "name": "authority",
+          "type": "address"
+        }
+      ],
+      "name": "AuthorityUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "GovernorPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "GovernorPushed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "GuardianPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "GuardianPushed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "PolicyPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "PolicyPushed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        }
+      ],
+      "name": "VaultPulled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "VaultPushed",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "authority",
+      "outputs": [
+        {
+          "internalType": "contract IAuthority",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "governor",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "guardian",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "newGovernor",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "newGuardian",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "newPolicy",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "newVault",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "policy",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullGovernor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullGuardian",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullPolicy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pullVault",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newGovernor",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "pushGovernor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newGuardian",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "pushGuardian",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newPolicy",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "pushPolicy",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_newVault",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_effectiveImmediately",
+          "type": "bool"
+        }
+      ],
+      "name": "pushVault",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IAuthority",
+          "name": "_newAuthority",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthority",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "vault",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+  "receipt": {
+    "to": null,
+    "from": "0x9f5Ea5Af0368E1d6F685F07978c8A22b2Df7c78D",
+    "contractAddress": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+    "transactionIndex": 8,
+    "gasUsed": "694592",
+    "logsBloom": "0x00000000010000000000000000000000000000000000000000000000000000000000000000004000000000000000400000000000000000000000000000000000000000000000000000000000000000000004000000000000000000800000000000400000020000000000000000000800000000000200000004000000000000000000000000000000000000000000000008000000000208000000000000000000000000000000000200000000000000081000000000000000001000020000000002000000000000000000100000000000000000000000200000000000000020000000000000000000000108000000000000000000000000000000000000000000",
+    "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c",
+    "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+    "logs": [
+      {
+        "transactionIndex": 8,
+        "blockNumber": 11092466,
+        "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+        "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+        "topics": [
+          "0x2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad"
+        ],
+        "data": "0x0000000000000000000000006b09a0c89c19459f076a62e19576f51618e3d705",
+        "logIndex": 18,
+        "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c"
+      },
+      {
+        "transactionIndex": 8,
+        "blockNumber": 11092466,
+        "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+        "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+        "topics": [
+          "0x4f337dcbb2512f18373c1f72d990a2f0a6ee5024b04007c52afd01eb73374a89",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000009f5ea5af0368e1d6f685f07978c8a22b2df7c78d"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "logIndex": 19,
+        "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c"
+      },
+      {
+        "transactionIndex": 8,
+        "blockNumber": 11092466,
+        "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+        "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+        "topics": [
+          "0xde655975891e8f09671597b37bd4d663bcc5c21dc6d7641b33cdf85fbe15d08b",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000009f5ea5af0368e1d6f685f07978c8a22b2df7c78d"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "logIndex": 20,
+        "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c"
+      },
+      {
+        "transactionIndex": 8,
+        "blockNumber": 11092466,
+        "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+        "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+        "topics": [
+          "0x90a5902a45c24aae553d5aff384ca16d6560f08d74c9784a4fbd2796d9e13f2b",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000009f5ea5af0368e1d6f685f07978c8a22b2df7c78d"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "logIndex": 21,
+        "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c"
+      },
+      {
+        "transactionIndex": 8,
+        "blockNumber": 11092466,
+        "transactionHash": "0xcd0105187849a8a53925d292b6ec06ade26e7fdd513c12089289ef7e1dd77a0f",
+        "address": "0x6B09a0C89c19459f076A62E19576F51618E3D705",
+        "topics": [
+          "0x05a80f5053574d6a62733e1692e8cbcfaf927dc82df0a7267ea2e489a7cc18ff",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000009f5ea5af0368e1d6f685f07978c8a22b2df7c78d"
+        ],
+        "data": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "logIndex": 22,
+        "blockHash": "0xb26b2b25ee9fd94453e694551bc9d3efaa1f87901a9f10e59f8ec61e6d9e114c"
+      }
+    ],
+    "blockNumber": 11092466,
+    "cumulativeGasUsed": "4474848",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x9f5Ea5Af0368E1d6F685F07978c8A22b2Df7c78D",
+    "0x9f5Ea5Af0368E1d6F685F07978c8A22b2Df7c78D",
+    "0x9f5Ea5Af0368E1d6F685F07978c8A22b2Df7c78D",
+    "0x9f5Ea5Af0368E1d6F685F07978c8A22b2Df7c78D"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "02f6f5b7f96c81c0711b29941957ccd4",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.9+commit.e5eed63a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_governor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_guardian\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_policy\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_vault\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"UNAUTHORIZED\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"contract IAuthority\",\"name\":\"authority\",\"type\":\"address\"}],\"name\":\"AuthorityUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"GovernorPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"GovernorPushed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"GuardianPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"GuardianPushed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"PolicyPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"PolicyPushed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"VaultPulled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"VaultPushed\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"authority\",\"outputs\":[{\"internalType\":\"contract IAuthority\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"governor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"guardian\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"newGovernor\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"newGuardian\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"newPolicy\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"newVault\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"policy\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullGovernor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullGuardian\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullPolicy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"pullVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newGovernor\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"pushGovernor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newGuardian\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"pushGuardian\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newPolicy\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"pushPolicy\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_newVault\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_effectiveImmediately\",\"type\":\"bool\"}],\"name\":\"pushVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IAuthority\",\"name\":\"_newAuthority\",\"type\":\"address\"}],\"name\":\"setAuthority\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"vault\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/Authority.sol\":\"Authority\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/Authority.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\r\\npragma solidity >=0.8.9;\\r\\n\\r\\nimport \\\"./interfaces/IAuthority.sol\\\";\\r\\n\\r\\nimport \\\"./types/AccessControlled.sol\\\";\\r\\n\\r\\ncontract Authority is IAuthority, AccessControlled {\\r\\n    /* ========== STATE VARIABLES ========== */\\r\\n\\r\\n    address public override governor;\\r\\n\\r\\n    address public override guardian;\\r\\n\\r\\n    address public override policy;\\r\\n\\r\\n    address public override vault;\\r\\n\\r\\n    address public newGovernor;\\r\\n\\r\\n    address public newGuardian;\\r\\n\\r\\n    address public newPolicy;\\r\\n\\r\\n    address public newVault;\\r\\n\\r\\n    /* ========== Constructor ========== */\\r\\n\\r\\n    constructor(\\r\\n        address _governor,\\r\\n        address _guardian,\\r\\n        address _policy,\\r\\n        address _vault\\r\\n    ) AccessControlled(IAuthority(address(this))) {\\r\\n        governor = _governor;\\r\\n        emit GovernorPushed(address(0), governor, true);\\r\\n        guardian = _guardian;\\r\\n        emit GuardianPushed(address(0), guardian, true);\\r\\n        policy = _policy;\\r\\n        emit PolicyPushed(address(0), policy, true);\\r\\n        vault = _vault;\\r\\n        emit VaultPushed(address(0), vault, true);\\r\\n    }\\r\\n\\r\\n    /* ========== GOV ONLY ========== */\\r\\n\\r\\n    function pushGovernor(address _newGovernor, bool _effectiveImmediately) external onlyGovernor {\\r\\n        if (_effectiveImmediately) governor = _newGovernor;\\r\\n        newGovernor = _newGovernor;\\r\\n        emit GovernorPushed(governor, newGovernor, _effectiveImmediately);\\r\\n    }\\r\\n\\r\\n    function pushGuardian(address _newGuardian, bool _effectiveImmediately) external onlyGovernor {\\r\\n        if (_effectiveImmediately) guardian = _newGuardian;\\r\\n        newGuardian = _newGuardian;\\r\\n        emit GuardianPushed(guardian, newGuardian, _effectiveImmediately);\\r\\n    }\\r\\n\\r\\n    function pushPolicy(address _newPolicy, bool _effectiveImmediately) external onlyGovernor {\\r\\n        if (_effectiveImmediately) policy = _newPolicy;\\r\\n        newPolicy = _newPolicy;\\r\\n        emit PolicyPushed(policy, newPolicy, _effectiveImmediately);\\r\\n    }\\r\\n\\r\\n    function pushVault(address _newVault, bool _effectiveImmediately) external onlyGovernor {\\r\\n        if (_effectiveImmediately) vault = _newVault;\\r\\n        newVault = _newVault;\\r\\n        emit VaultPushed(vault, newVault, _effectiveImmediately);\\r\\n    }\\r\\n\\r\\n    /* ========== PENDING ROLE ONLY ========== */\\r\\n\\r\\n    function pullGovernor() external {\\r\\n        require(msg.sender == newGovernor, \\\"!newGovernor\\\");\\r\\n        emit GovernorPulled(governor, newGovernor);\\r\\n        governor = newGovernor;\\r\\n    }\\r\\n\\r\\n    function pullGuardian() external {\\r\\n        require(msg.sender == newGuardian, \\\"!newGuard\\\");\\r\\n        emit GuardianPulled(guardian, newGuardian);\\r\\n        guardian = newGuardian;\\r\\n    }\\r\\n\\r\\n    function pullPolicy() external {\\r\\n        require(msg.sender == newPolicy, \\\"!newPolicy\\\");\\r\\n        emit PolicyPulled(policy, newPolicy);\\r\\n        policy = newPolicy;\\r\\n    }\\r\\n\\r\\n    function pullVault() external {\\r\\n        require(msg.sender == newVault, \\\"!newVault\\\");\\r\\n        emit VaultPulled(vault, newVault);\\r\\n        vault = newVault;\\r\\n    }\\r\\n}\\r\\n\",\"keccak256\":\"0x77058c60d36295e34142afa553f413cc7fe5e6cb420ee6b3ed9b4481731104a7\",\"license\":\"MIT\"},\"contracts/interfaces/IAuthority.sol\":{\"content\":\"// SPDX-License-Identifier: AGPL-3.0\\r\\npragma solidity >=0.8.9;\\r\\n\\r\\ninterface IAuthority {\\r\\n    /* ========== EVENTS ========== */\\r\\n\\r\\n    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\r\\n    event GuardianPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\r\\n    event PolicyPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\r\\n    event VaultPushed(address indexed from, address indexed to, bool _effectiveImmediately);\\r\\n\\r\\n    event GovernorPulled(address indexed from, address indexed to);\\r\\n    event GuardianPulled(address indexed from, address indexed to);\\r\\n    event PolicyPulled(address indexed from, address indexed to);\\r\\n    event VaultPulled(address indexed from, address indexed to);\\r\\n\\r\\n    /* ========== VIEW ========== */\\r\\n\\r\\n    function governor() external view returns (address);\\r\\n\\r\\n    function guardian() external view returns (address);\\r\\n\\r\\n    function policy() external view returns (address);\\r\\n\\r\\n    function vault() external view returns (address);\\r\\n}\\r\\n\",\"keccak256\":\"0x162ef81a6d172910d8817409df50dc7155f746bcd4173a9e6c844a24abd78fca\",\"license\":\"AGPL-3.0\"},\"contracts/types/AccessControlled.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\r\\n\\r\\npragma solidity ^0.8.9;\\r\\n\\r\\nimport \\\"../interfaces/IAuthority.sol\\\";\\r\\n\\r\\nerror UNAUTHORIZED();\\r\\nerror AUTHORITY_INITIALIZED();\\r\\n\\r\\n/// @dev Reasoning for this contract = modifiers literaly copy code\\r\\n/// instead of pointing towards the logic to execute. Over many\\r\\n/// functions this bloats contract size unnecessarily.\\r\\n/// imho modifiers are a meme.\\r\\nabstract contract AccessControlled {\\r\\n    /* ========== EVENTS ========== */\\r\\n\\r\\n    event AuthorityUpdated(IAuthority authority);\\r\\n\\r\\n    /* ========== STATE VARIABLES ========== */\\r\\n\\r\\n    IAuthority public authority;\\r\\n\\r\\n    /* ========== Constructor ========== */\\r\\n\\r\\n    constructor(IAuthority _authority) {\\r\\n        authority = _authority;\\r\\n        emit AuthorityUpdated(_authority);\\r\\n    }\\r\\n\\r\\n    /* ========== \\\"MODIFIERS\\\" ========== */\\r\\n\\r\\n    modifier onlyGovernor {\\r\\n\\t_onlyGovernor();\\r\\n\\t_;\\r\\n    }\\r\\n\\r\\n    modifier onlyGuardian {\\r\\n\\t_onlyGuardian();\\r\\n\\t_;\\r\\n    }\\r\\n\\r\\n    modifier onlyPolicy {\\r\\n\\t_onlyPolicy();\\r\\n\\t_;\\r\\n    }\\r\\n\\r\\n    modifier onlyVault {\\r\\n\\t_onlyVault();\\r\\n\\t_;\\r\\n    }\\r\\n\\r\\n    /* ========== GOV ONLY ========== */\\r\\n\\r\\n    function initializeAuthority(IAuthority _newAuthority) internal {\\r\\n        if (authority != IAuthority(address(0))) revert AUTHORITY_INITIALIZED();\\r\\n        authority = _newAuthority;\\r\\n        emit AuthorityUpdated(_newAuthority);\\r\\n    }\\r\\n\\r\\n    function setAuthority(IAuthority _newAuthority) external {\\r\\n        _onlyGovernor();\\r\\n        authority = _newAuthority;\\r\\n        emit AuthorityUpdated(_newAuthority);\\r\\n    }\\r\\n\\r\\n    /* ========== INTERNAL CHECKS ========== */\\r\\n\\r\\n    function _onlyGovernor() internal view {\\r\\n        if (msg.sender != authority.governor()) revert UNAUTHORIZED();\\r\\n    }\\r\\n\\r\\n    function _onlyGuardian() internal view {\\r\\n        if (msg.sender != authority.guardian()) revert UNAUTHORIZED();\\r\\n    }\\r\\n\\r\\n    function _onlyPolicy() internal view {\\r\\n        if (msg.sender != authority.policy()) revert UNAUTHORIZED();\\r\\n    }\\r\\n\\r\\n    function _onlyVault() internal view {\\r\\n        if (msg.sender != authority.vault()) revert UNAUTHORIZED();\\r\\n    }\\r\\n}\\r\\n\",\"keccak256\":\"0xbe21d3fcdfb682f395f50ff9b6916912ab6a806c70f460e5c16ed30baeb7374a\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50604051610b96380380610b9683398101604081905261002f916101f0565b600080546001600160a01b031916309081179091556040518181527f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad9060200160405180910390a150600180546001600160a01b0319166001600160a01b0386169081178255604051918252906000907f4f337dcbb2512f18373c1f72d990a2f0a6ee5024b04007c52afd01eb73374a899060200160405180910390a3600280546001600160a01b0319166001600160a01b038516908117909155604051600181526000907fde655975891e8f09671597b37bd4d663bcc5c21dc6d7641b33cdf85fbe15d08b9060200160405180910390a3600380546001600160a01b0319166001600160a01b038416908117909155604051600181526000907f90a5902a45c24aae553d5aff384ca16d6560f08d74c9784a4fbd2796d9e13f2b9060200160405180910390a3600480546001600160a01b0319166001600160a01b038316908117909155604051600181526000907f05a80f5053574d6a62733e1692e8cbcfaf927dc82df0a7267ea2e489a7cc18ff9060200160405180910390a350505050610244565b80516001600160a01b03811681146101eb57600080fd5b919050565b6000806000806080858703121561020657600080fd5b61020f856101d4565b935061021d602086016101d4565b925061022b604086016101d4565b9150610239606086016101d4565b905092959194509250565b610943806102536000396000f3fe608060405234801561001057600080fd5b50600436106101365760003560e01c80635beede08116100b25780638fd2057711610081578063bf7e214f11610066578063bf7e214f14610255578063d8a0421214610268578063fbfa77cf1461027057600080fd5b80638fd205771461023a578063be11f1dd1461024d57600080fd5b80635beede08146101f95780636fe72c14146102015780637a9e5e4b1461021457806388aaf0c81461022757600080fd5b8063215e92bc11610109578063452a9320116100ee578063452a9320146101c057806352759694146101d357806354e3d703146101e657600080fd5b8063215e92bc146101a55780633bf90c28146101ad57600080fd5b80630505c8c91461013b5780630c340a241461016a578063198598471461017d5780631afe871414610190575b600080fd5b60035461014e906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b60015461014e906001600160a01b031681565b60065461014e906001600160a01b031681565b6101a361019e3660046108b7565b610283565b005b6101a361030d565b60075461014e906001600160a01b031681565b60025461014e906001600160a01b031681565b6101a36101e13660046108b7565b6103cf565b6101a36101f43660046108b7565b610451565b6101a36104d3565b6101a361020f3660046108b7565b610590565b6101a36102223660046108f5565b610612565b60085461014e906001600160a01b031681565b60055461014e906001600160a01b031681565b6101a361066e565b60005461014e906001600160a01b031681565b6101a361072b565b60045461014e906001600160a01b031681565b61028b6107e8565b80156102ad57600280546001600160a01b0319166001600160a01b0384161790555b600680546001600160a01b0319166001600160a01b038481169182179092556002546040518415158152919216907fde655975891e8f09671597b37bd4d663bcc5c21dc6d7641b33cdf85fbe15d08b906020015b60405180910390a35050565b6008546001600160a01b0316331461036c5760405162461bcd60e51b815260206004820152600960248201527f216e65775661756c74000000000000000000000000000000000000000000000060448201526064015b60405180910390fd5b6008546004546040516001600160a01b0392831692909116907f3d08e01e3b8340be6ca709db7a9321448661a1f490da4d7f3eb03d84fe73095390600090a3600854600480546001600160a01b0319166001600160a01b03909216919091179055565b6103d76107e8565b80156103f957600180546001600160a01b0319166001600160a01b0384161790555b600580546001600160a01b0319166001600160a01b038481169182179092556001546040518415158152919216907f4f337dcbb2512f18373c1f72d990a2f0a6ee5024b04007c52afd01eb73374a8990602001610301565b6104596107e8565b801561047b57600380546001600160a01b0319166001600160a01b0384161790555b600780546001600160a01b0319166001600160a01b038481169182179092556003546040518415158152919216907f90a5902a45c24aae553d5aff384ca16d6560f08d74c9784a4fbd2796d9e13f2b90602001610301565b6007546001600160a01b0316331461052d5760405162461bcd60e51b815260206004820152600a60248201527f216e6577506f6c696379000000000000000000000000000000000000000000006044820152606401610363565b6007546003546040516001600160a01b0392831692909116907f64d2fa522b403ca222efff0c7ad07d2ef45472a45e5770918bdfa9a2845d29a890600090a3600754600380546001600160a01b0319166001600160a01b03909216919091179055565b6105986107e8565b80156105ba57600480546001600160a01b0319166001600160a01b0384161790555b600880546001600160a01b0319166001600160a01b038481169182179092556004546040518415158152919216907f05a80f5053574d6a62733e1692e8cbcfaf927dc82df0a7267ea2e489a7cc18ff90602001610301565b61061a6107e8565b600080546001600160a01b0319166001600160a01b0383169081179091556040519081527f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad9060200160405180910390a150565b6006546001600160a01b031633146106c85760405162461bcd60e51b815260206004820152600960248201527f216e6577477561726400000000000000000000000000000000000000000000006044820152606401610363565b6006546002546040516001600160a01b0392831692909116907f0960fb9900fb8096216606c4f7fc2fce5d08cc0c82da55cec8619b66b523848190600090a3600654600280546001600160a01b0319166001600160a01b03909216919091179055565b6005546001600160a01b031633146107855760405162461bcd60e51b815260206004820152600c60248201527f216e6577476f7665726e6f7200000000000000000000000000000000000000006044820152606401610363565b6005546001546040516001600160a01b0392831692909116907fffd6fed33fe8ec1016718bdd5d04ae6fecd9aba0da6578807daaaa7fc3d1682690600090a3600554600180546001600160a01b0319166001600160a01b03909216919091179055565b60008054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561083457600080fd5b505afa158015610848573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061086c9190610919565b6001600160a01b0316336001600160a01b03161461089d5760405163075fd2b160e01b815260040160405180910390fd5b565b6001600160a01b03811681146108b457600080fd5b50565b600080604083850312156108ca57600080fd5b82356108d58161089f565b9150602083013580151581146108ea57600080fd5b809150509250929050565b60006020828403121561090757600080fd5b81356109128161089f565b9392505050565b60006020828403121561092b57600080fd5b81516109128161089f56fea164736f6c6343000809000a",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106101365760003560e01c80635beede08116100b25780638fd2057711610081578063bf7e214f11610066578063bf7e214f14610255578063d8a0421214610268578063fbfa77cf1461027057600080fd5b80638fd205771461023a578063be11f1dd1461024d57600080fd5b80635beede08146101f95780636fe72c14146102015780637a9e5e4b1461021457806388aaf0c81461022757600080fd5b8063215e92bc11610109578063452a9320116100ee578063452a9320146101c057806352759694146101d357806354e3d703146101e657600080fd5b8063215e92bc146101a55780633bf90c28146101ad57600080fd5b80630505c8c91461013b5780630c340a241461016a578063198598471461017d5780631afe871414610190575b600080fd5b60035461014e906001600160a01b031681565b6040516001600160a01b03909116815260200160405180910390f35b60015461014e906001600160a01b031681565b60065461014e906001600160a01b031681565b6101a361019e3660046108b7565b610283565b005b6101a361030d565b60075461014e906001600160a01b031681565b60025461014e906001600160a01b031681565b6101a36101e13660046108b7565b6103cf565b6101a36101f43660046108b7565b610451565b6101a36104d3565b6101a361020f3660046108b7565b610590565b6101a36102223660046108f5565b610612565b60085461014e906001600160a01b031681565b60055461014e906001600160a01b031681565b6101a361066e565b60005461014e906001600160a01b031681565b6101a361072b565b60045461014e906001600160a01b031681565b61028b6107e8565b80156102ad57600280546001600160a01b0319166001600160a01b0384161790555b600680546001600160a01b0319166001600160a01b038481169182179092556002546040518415158152919216907fde655975891e8f09671597b37bd4d663bcc5c21dc6d7641b33cdf85fbe15d08b906020015b60405180910390a35050565b6008546001600160a01b0316331461036c5760405162461bcd60e51b815260206004820152600960248201527f216e65775661756c74000000000000000000000000000000000000000000000060448201526064015b60405180910390fd5b6008546004546040516001600160a01b0392831692909116907f3d08e01e3b8340be6ca709db7a9321448661a1f490da4d7f3eb03d84fe73095390600090a3600854600480546001600160a01b0319166001600160a01b03909216919091179055565b6103d76107e8565b80156103f957600180546001600160a01b0319166001600160a01b0384161790555b600580546001600160a01b0319166001600160a01b038481169182179092556001546040518415158152919216907f4f337dcbb2512f18373c1f72d990a2f0a6ee5024b04007c52afd01eb73374a8990602001610301565b6104596107e8565b801561047b57600380546001600160a01b0319166001600160a01b0384161790555b600780546001600160a01b0319166001600160a01b038481169182179092556003546040518415158152919216907f90a5902a45c24aae553d5aff384ca16d6560f08d74c9784a4fbd2796d9e13f2b90602001610301565b6007546001600160a01b0316331461052d5760405162461bcd60e51b815260206004820152600a60248201527f216e6577506f6c696379000000000000000000000000000000000000000000006044820152606401610363565b6007546003546040516001600160a01b0392831692909116907f64d2fa522b403ca222efff0c7ad07d2ef45472a45e5770918bdfa9a2845d29a890600090a3600754600380546001600160a01b0319166001600160a01b03909216919091179055565b6105986107e8565b80156105ba57600480546001600160a01b0319166001600160a01b0384161790555b600880546001600160a01b0319166001600160a01b038481169182179092556004546040518415158152919216907f05a80f5053574d6a62733e1692e8cbcfaf927dc82df0a7267ea2e489a7cc18ff90602001610301565b61061a6107e8565b600080546001600160a01b0319166001600160a01b0383169081179091556040519081527f2f658b440c35314f52658ea8a740e05b284cdc84dc9ae01e891f21b8933e7cad9060200160405180910390a150565b6006546001600160a01b031633146106c85760405162461bcd60e51b815260206004820152600960248201527f216e6577477561726400000000000000000000000000000000000000000000006044820152606401610363565b6006546002546040516001600160a01b0392831692909116907f0960fb9900fb8096216606c4f7fc2fce5d08cc0c82da55cec8619b66b523848190600090a3600654600280546001600160a01b0319166001600160a01b03909216919091179055565b6005546001600160a01b031633146107855760405162461bcd60e51b815260206004820152600c60248201527f216e6577476f7665726e6f7200000000000000000000000000000000000000006044820152606401610363565b6005546001546040516001600160a01b0392831692909116907fffd6fed33fe8ec1016718bdd5d04ae6fecd9aba0da6578807daaaa7fc3d1682690600090a3600554600180546001600160a01b0319166001600160a01b03909216919091179055565b60008054906101000a90046001600160a01b03166001600160a01b0316630c340a246040518163ffffffff1660e01b815260040160206040518083038186803b15801561083457600080fd5b505afa158015610848573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061086c9190610919565b6001600160a01b0316336001600160a01b03161461089d5760405163075fd2b160e01b815260040160405180910390fd5b565b6001600160a01b03811681146108b457600080fd5b50565b600080604083850312156108ca57600080fd5b82356108d58161089f565b9150602083013580151581146108ea57600080fd5b809150509250929050565b60006020828403121561090757600080fd5b81356109128161089f565b9392505050565b60006020828403121561092b57600080fd5b81516109128161089f56fea164736f6c6343000809000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 8469,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "authority",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_contract(IAuthority)8324"
+      },
+      {
+        "astId": 6155,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "governor",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_address"
+      },
+      {
+        "astId": 6158,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "guardian",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_address"
+      },
+      {
+        "astId": 6161,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "policy",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_address"
+      },
+      {
+        "astId": 6164,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "vault",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_address"
+      },
+      {
+        "astId": 6166,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "newGovernor",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_address"
+      },
+      {
+        "astId": 6168,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "newGuardian",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_address"
+      },
+      {
+        "astId": 6170,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "newPolicy",
+        "offset": 0,
+        "slot": "7",
+        "type": "t_address"
+      },
+      {
+        "astId": 6172,
+        "contract": "contracts/Authority.sol:Authority",
+        "label": "newVault",
+        "offset": 0,
+        "slot": "8",
+        "type": "t_address"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_contract(IAuthority)8324": {
+        "encoding": "inplace",
+        "label": "contract IAuthority",
+        "numberOfBytes": "20"
+      }
+    }
+  }
+}
