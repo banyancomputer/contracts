@@ -1,6 +1,4 @@
-import { Authority } from '../types/contracts/Authority';
-import { ERC20Mock } from '../types/contracts/mocks/ERC20Mock';
-import { EscrowInterface } from '../types/contracts/Escrow';
+import { Authority } from "../types"; // just to redeclare this test scope
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
@@ -12,6 +10,7 @@ describe("Escrow", async () => {
     this.ERC1155Mock = await ethers.getContractFactory("ERC1155Mock");
 
     this.Authority = await ethers.getContractFactory("Authority");
+    this.Treasury = await ethers.getContractFactory("Treasury");
     this.Escrow = await ethers.getContractFactory("Escrow");
     [ this.owner, this.executor ] = await ethers.getSigners();
     this.ownerAddress = await this.owner.getAddress();
@@ -26,15 +25,21 @@ describe("Escrow", async () => {
     this.erc721Mock = await this.ERC721Mock.deploy();
     this.erc1155Mock = await this.ERC1155Mock.deploy();
     this.authority = await this.Authority.deploy(this.ownerAddress, this.ownerAddress, this.ownerAddress, this.ownerAddress);
+    this.treasury = await this.Treasury.deploy(this.authority.address);
+
+    // Set up treasury vault
+    await this.authority.pushVault(this.treasury.address, true);
+    expect(await this.authority.vault()).to.equal(this.treasury.address);
+
     this.escrow = await this.Escrow.deploy(this.authority.address);
     await this.escrow.deployed();
 
     // ERC20Mock stuff
-    const approve = await this.erc20Mock.approve(this.escrow.address, 10000);
+    const approve = await this.erc20Mock.approve(this.treasury.address, 10000);
     await approve.wait();
     const transfer = await this.erc20Mock.transfer(this.executorAddress, 10000);
     await transfer.wait();
-    const approveExecutor = await this.erc20Mock.connect(this.executor).approve(this.escrow.address, 1000);
+    const approveExecutor = await this.erc20Mock.connect(this.executor).approve(this.treasury.address, 1000);
     await approveExecutor.wait();
 
     // ERC721Mock stuff
@@ -43,9 +48,9 @@ describe("Escrow", async () => {
     // console.log(await this.erc721Mock.ownerOf(1));
     const mintExecutor = await this.erc721Mock.mint(this.executorAddress);
     await mintExecutor.wait();
-    const approveOwner721 = await this.erc721Mock.setApprovalForAll(this.escrow.address, true);
+    const approveOwner721 = await this.erc721Mock.setApprovalForAll(this.treasury.address, true);
     await approveOwner721.wait();
-    const approveExecutor721 = await this.erc721Mock.connect(this.executor).setApprovalForAll(this.escrow.address, true);
+    const approveExecutor721 = await this.erc721Mock.connect(this.executor).setApprovalForAll(this.treasury.address, true);
     await approveExecutor721.wait();
 
     // ERC1155Mock stuff
@@ -53,9 +58,9 @@ describe("Escrow", async () => {
     await mintOwner1155.wait();
     const mintExecutor1155 = await this.erc1155Mock.mint(this.executorAddress, 1, 100, ethers.BigNumber.from(1));
     await mintExecutor1155.wait();
-    const approveOwner1155 = await this.erc1155Mock.setApprovalForAll(this.escrow.address, true);
+    const approveOwner1155 = await this.erc1155Mock.setApprovalForAll(this.treasury.address, true);
     await approveOwner1155.wait();
-    const approveExecutor1155 = await this.erc1155Mock.connect(this.executor).setApprovalForAll(this.escrow.address, true);
+    const approveExecutor1155 = await this.erc1155Mock.connect(this.executor).setApprovalForAll(this.treasury.address, true);
     await approveExecutor1155.wait();
 
 
@@ -104,12 +109,12 @@ describe("Escrow", async () => {
   }); 
 
   it("should start an ERC20 collateral offer", async function () {
-    
+
     // const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
     const offer = await this.escrow.startOffer(...this.offerParams);
     const offerTx = await offer.wait();
 
-    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
     const offerId = offerResult[0].toNumber();
 
     expect(offerId).to.equal(1);
@@ -121,7 +126,7 @@ describe("Escrow", async () => {
     const offer = await this.escrow.startOffer(...this.offerParams721);
     const offerTx = await offer.wait();
 
-    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
     const offerId = offerResult[0].toNumber();
 
     expect(offerId).to.equal(1);
@@ -130,10 +135,10 @@ describe("Escrow", async () => {
 
   it("should start an ERC1155 collateral offer", async function () {
     
-    const offer = await this.escrow.startOffer(...this.offerParams1155);
+    const offer = await this.escrow.startOffer(...this.offerParams1155, { value: 0});
     const offerTx = await offer.wait();
 
-    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[4].data);
     const offerId = offerResult[0].toNumber();
 
     expect(offerId).to.equal(1);
@@ -144,7 +149,8 @@ describe("Escrow", async () => {
       // const offerId = await this.escrow.callStatic.startOffer(...this.offerParams);
       const offer = await this.escrow.startOffer(...this.offerParams);
       const offerTx = await offer.wait();
-      const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[0].data);
+
+      const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
       const offerId = offerResult[0].toNumber();
       
       const cancelOffer = await this.escrow.cancelOffer(offerId);
@@ -167,6 +173,7 @@ describe("Escrow", async () => {
     expect(offerArray[2]).to.equal(1);
     expect(offerArray[3]).to.equal("");
   });
+
 });
 
 
