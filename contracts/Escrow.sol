@@ -10,12 +10,16 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "./types/AccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 
+import "hardhat/console.sol";
+
 contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
 {
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
+
+    ITreasury public treasury;
 
     uint256 private _offerId;
     string private _symbol;
@@ -59,10 +63,11 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
         _offerId = 0;
+        treasury = ITreasury(authority.vault());
     }
 
-     function startOffer( address[] memory creatorTokenAddress, uint256[] memory creatorTokenId, uint256[] memory creatorAmount, uint8[]  memory creatorTokenType,
-                         address  executerAddress , address[] memory executorTokenAddress, uint256[] memory executorTokenId, uint256[] memory executorAmount, uint8[] memory executorTokenType  ) public returns(uint256)
+     function startOffer(address[] memory creatorTokenAddress, uint256[] memory creatorTokenId, uint256[] memory creatorAmount, uint8[] memory creatorTokenType,
+                         address  executerAddress , address[] memory executorTokenAddress, uint256[] memory executorTokenId, uint256[] memory executorAmount, uint8[] memory executorTokenType) public payable returns(uint256)
     {
         require(executerAddress != address(0), 'EXECUTER_ADDRESS_NOT_VALID' );
         require(creatorTokenAddress.length == creatorTokenId.length && creatorTokenAddress.length ==  creatorAmount.length 
@@ -111,6 +116,17 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
         _transactions[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
         _openOffers[executerAddress].push(_offerId);
+
+        // Start moving funds to Treasury
+        for (uint256 i = 0; i < creatorTokenAddress.length; i++) {
+            // console.log("Escrow address", address(this));           
+            treasury.deposit{ value: msg.value }(creatorAmount[i], creatorTokenAddress[i], creatorTokenType[i], creatorTokenId, creatorAmount, msg.sender);
+        }
+
+        for (uint256 i = 0; i < executorTokenAddress.length; i++) {           
+            treasury.deposit{ value: msg.value }(executorAmount[i], executorTokenAddress[i], executorTokenType[i], executorTokenId, executorAmount, executerAddress);
+        }    
+
         emit NewOffer(msg.sender, executerAddress, _offerId );
         return _offerId;
     }
@@ -149,18 +165,18 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
     }
     function verifyERC721 (address from, address tokenAddress, uint256 tokenId) internal view returns (bool){
         require(from == ERC721(tokenAddress).ownerOf{gas:100000}(tokenId), 'ERROR: ERR_NOT_OWN_ID_ERC721');
-        require( ERC721(tokenAddress).isApprovedForAll{gas:100000}( from, address(this) ) , 'ERROR: ERR_NOT_ALLOW_TO_TRANSER_ITENS_ERC721');
+        require( ERC721(tokenAddress).isApprovedForAll{gas:100000}(from, authority.vault() ) , 'ERROR: ERR_NOT_ALLOW_TO_TRANSER_ITENS_ERC721');
         return true;
     }
     function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf{gas:100000}(from), 'ERROR: ERR_NOT_ENOUGH_FUNDS_ERC20');
-        require(amount <= IERC20(tokenAddress).allowance{gas:100000}(from, address(this) ), 'ERROR: ERR_NOT_ALLOW_SPEND_FUNDS');
+        require(amount <= IERC20(tokenAddress).allowance{gas:100000}(from, authority.vault() ), 'ERROR: ERR_NOT_ALLOW_SPEND_FUNDS');
         return true;
     }
     function verifyERC1155 (address from, address tokenAddress, uint256 amount, uint256 tokenId) internal view returns (bool){
         require(tokenId > 0, 'ERROR: STAKE_ERC1155_ID_SHOULD_GREATER_THEN_0');
         require(amount > 0 && amount <= ERC1155(tokenAddress).balanceOf{gas:100000}(from, tokenId), 'ERROR: ERR_NOT_ENOUGH_FUNDS_ERC1155');
-        require( ERC1155(tokenAddress).isApprovedForAll{gas:100000}( from, address(this) ) , 'ERROR: ERR_NOT_ALLOW_TO_TRANSER_ITENS_ERC1155');
+        require( ERC1155(tokenAddress).isApprovedForAll{gas:100000}( from, authority.vault() ) , 'ERROR: ERR_NOT_ALLOW_TO_TRANSER_ITENS_ERC1155');
         return true;
     }
     
@@ -193,5 +209,10 @@ contract Escrow is Context, ERC1155Holder, ERC721Holder, AccessControlled
             }   
         }
         return false;
+    }
+
+    function setTreasury(address _treasury) public onlyGovernor {
+        require(_treasury != address(0), 'ERROR: TREASURY_ADDRESS_NOT_VALID');
+        treasury = ITreasury(_treasury);
     }
 }
