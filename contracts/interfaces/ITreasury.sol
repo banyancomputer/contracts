@@ -16,5 +16,12 @@ interface ITreasury {
     event WithdrawERC1155(address indexed token, uint256[] indexed tokenIds, uint256[] amount);
     event WithdrawalEther(uint256 amount);
 
+    /* ========== FUNCTIONS ========== */
     
+    function deposit(uint256 _amount,
+        address _token,
+        uint8 _tokenType,
+        uint256[] memory _tokenIds,
+        uint256[] memory _amounts,
+        address _sender) external payable;
 }

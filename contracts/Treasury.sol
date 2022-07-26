@@ -74,19 +74,20 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
         address _token,
         uint8 _tokenType,
         uint256[] memory _tokenIds,
-        uint256[] memory _amounts
+        uint256[] memory _amounts,
+        address _sender
     ) external payable {
         if (TokenType(_tokenType) == TokenType.ERC20) {
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+            IERC20(_token).transferFrom(_sender, address(this), _amount);
             emit DepositERC20(_token, _amount);
         } else if (TokenType(_tokenType) == TokenType.ERC1155) {
-            IERC1155(_token).safeBatchTransferFrom(msg.sender, address(this), _tokenIds, _amounts, "");
+            IERC1155(_token).safeBatchTransferFrom(_sender, address(this), _tokenIds, _amounts, "");
             emit DepositERC1155(_token, _tokenIds, _amounts);
         } else if (TokenType(_tokenType) == TokenType.ERC721) {
-            IERC721(_token).transferFrom(msg.sender, address(this), _tokenIds[0]);
+            IERC721(_token).transferFrom(_sender, address(this), _tokenIds[0]);
             emit DepositERC721(_token, _tokenIds[0]);
         } else if (TokenType(_tokenType) == TokenType.NATIVE) {
-            require(payable(msg.sender).send(_amount));
+            require(payable(_sender).send(_amount));
             emit DepositEther(msg.value);
         } else {
             revert(invalidToken);
@@ -147,4 +148,5 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
             revert(invalidToken);
         }
     }
+    
 }
