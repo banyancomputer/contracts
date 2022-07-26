@@ -12,9 +12,6 @@ import {
     ERC1155Mock__factory
 } from "../../types";
 
-
-const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(resolve, ms))
-
 // TODO: Shouldn't run setup methods if the contracts weren't redeployed.
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts, ethers } = hre;
@@ -51,7 +48,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const erc1155Mock = await ERC1155Mock__factory.connect(erc1155MockDeployment.address, signer);
     await erc1155Mock.mint(deployerAddress, 1, 100, "0x0000000000000000000000000000000000000000");
     console.log("Minted 1 ERC1155 token to deployer without metadata");
-
 
 }
     
