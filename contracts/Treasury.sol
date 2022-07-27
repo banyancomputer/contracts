@@ -52,6 +52,14 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
 
     mapping(STATUS => mapping(address => bool)) public permissions;
 
+    // Fee - default 0.1%
+    uint256 public fee = 10; // 1 == 0.01%
+    uint256 public feeDivisor = 10000;
+
+    // Treasury balance
+    mapping(address => uint256) public erc20Treasury; // tokenAddress => feePot
+    mapping(address => mapping(uint256 => uint256)) public erc1155Treasury; // tokenAddress => tokenId => feePot
+
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
@@ -76,7 +84,7 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
         uint256[] memory _tokenIds,
         uint256[] memory _amounts,
         address _sender
-    ) external payable {
+    ) external payable {        
         if (TokenType(_tokenType) == TokenType.ERC20) {
             IERC20(_token).transferFrom(_sender, address(this), _amount);
             emit DepositERC20(_token, _amount);
@@ -92,6 +100,13 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
         } else {
             revert(invalidToken);
         }
+
+        // collect fees
+        // collect fee from executor's deposit? 
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            collectFee(_token, _tokenType, _amounts[i], _tokenIds[i]);
+        }
+        
     }
 
     /**
@@ -148,5 +163,39 @@ contract Treasury is Context, ERC1155Holder, ERC721Holder, AccessControlled {
             revert(invalidToken);
         }
     }
-    
+
+    function collectFee(address _token, uint8 _tokenType, uint256 _amout, uint256 _tokenId) internal {     
+        uint256 _fee = (_amout * fee) / feeDivisor;
+        if (TokenType(_tokenType) == TokenType.ERC20) {
+            erc20Treasury[_token] += _fee;
+        } else if (TokenType(_tokenType) == TokenType.ERC1155) {
+            erc1155Treasury[_token][_tokenId] += _fee;
+        } else if (TokenType(_tokenType) == TokenType.ERC721) {
+            // TBD
+        } else if (TokenType(_tokenType) == TokenType.NATIVE) {
+            // TBD
+        } else {
+            revert(invalidToken);
+        }
+
+    }
+
+    function setFee(uint256 _fee) public onlyGovernor {
+        require(_fee < 10000); // _fee must be less than 100%
+        fee = _fee;
+    }
+
+    function getTreasuryBalance(address _token, uint8 _tokenType, uint256 _tokenId) public view returns (uint256) {
+        if (TokenType(_tokenType) == TokenType.ERC20) {
+            return erc20Treasury[_token];
+        } else if (TokenType(_tokenType) == TokenType.ERC1155) {
+            return erc1155Treasury[_token][_tokenId];
+        } else if (TokenType(_tokenType) == TokenType.ERC721) {
+            return 0; // TBD
+        } else if (TokenType(_tokenType) == TokenType.NATIVE) {
+            return 0; // TBD
+        } else {
+            revert(invalidToken);
+        }
+    }
 }
