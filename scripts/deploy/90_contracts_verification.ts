@@ -17,6 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const authorityDeployment = await deployments.get(CONTRACTS.authority);
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
     const escrowDeployment = await deployments.get(CONTRACTS.escrow);
+    const erc20MockDeployment = await deployments.get(CONTRACTS.erc20Mock);
     
     const network = await ethers.provider.getNetwork();
 
@@ -77,6 +78,25 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
             if (error instanceof NomicLabsHardhatPluginError) {
                 // specific error
                 console.log("Error verifying -- escrow Contract");
+                console.log(error.message);
+            } else {
+                throw error; // let others bubble up
+            }                      
+        }
+
+        try {
+            console.log("Sleepin' for 30 seconds to wait for the chain to be ready...");
+            await delay(30e3); // 30 seconds delay to allow the network to be synced
+            await hre.run("verify:verify", {
+                address: erc20MockDeployment.address,
+                constructorArguments: [],
+                contract: "contracts/mocks/ERC20Mock.sol:BanyanERC20Mock"
+            });
+            console.log("Verified -- erc20Mock Contract");
+        } catch (error) {
+            if (error instanceof NomicLabsHardhatPluginError) {
+                // specific error
+                console.log("Error verifying -- erc20Mock Contract");
                 console.log(error.message);
             } else {
                 throw error; // let others bubble up

@@ -14,21 +14,8 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         skipIfAlreadyDeployed: true,
     });
 
-    await deploy(CONTRACTS.erc721Mock, {
-        from: deployer,
-        args: [],
-        log: true,
-        skipIfAlreadyDeployed: true,
-    });
-
-    await deploy(CONTRACTS.erc1155Mock, {
-        from: deployer,
-        args: [],
-        log: true,
-        skipIfAlreadyDeployed: true,
-    });
 };
 
-func.tags = [CONTRACTS.erc20Mock, CONTRACTS.erc721Mock, CONTRACTS.erc1155Mock];
+func.tags = [CONTRACTS.erc20Mock];
 
 export default func;

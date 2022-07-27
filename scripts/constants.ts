@@ -2,7 +2,7 @@ export const CONTRACTS: Record<string, string> = {
     escrow: "Escrow",
     authority: "Authority",
     treasury: "Treasury",
-    erc20Mock: "ERC20Mock",
+    erc20Mock: "BanyanERC20Mock",
     erc721Mock: "ERC721Mock",
     erc1155Mock: "ERC1155Mock",
 };
