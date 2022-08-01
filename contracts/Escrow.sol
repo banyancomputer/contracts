@@ -44,7 +44,7 @@ contract Escrow is Context, AccessControlled
         address executor;
         OfferCounterpart executorCounterpart;
         uint256 id;
-        string file;
+        bytes32[20] proof;
         string description;
         OfferStatus offerStatus;
     }
@@ -105,10 +105,10 @@ contract Escrow is Context, AccessControlled
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
-    function getOffer(uint256 offerId) public view returns (address, address, uint8, string memory)
+    function getOffer(uint256 offerId) public view returns (address, address, uint8, bytes32[20] memory)
     {
         Offer storage store = _transactions[offerId];
-        return (store.creator, store.executor, uint8(store.offerStatus), store.file);
+        return (store.creator, store.executor, uint8(store.offerStatus), store.proof);
     }
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
@@ -164,5 +164,9 @@ contract Escrow is Context, AccessControlled
     // cursor is 32 bytes step
     function parseSlice(bytes memory file, uint256 cursor) public pure returns(bytes32) {        
         return bytes32(file.slice(cursor*32, 32));
+    }
+
+    function saveProof(uint256 offerId, bytes memory file) public {
+        _transactions[offerId].proof = parseFile(file);
     }
 }

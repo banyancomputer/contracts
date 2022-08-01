@@ -96,11 +96,22 @@ describe("Escrow", async () => {
 
   it("should get slices of a bao file", async function () {
     const file = await fs.readFileSync("./test/1");
+
+    const offer = await this.escrow.startOffer(...this.offerParams);
+    const offerTx = await offer.wait();
+
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
+    const offerId = offerResult[0].toNumber();
     // console.log(file);
     console.log(await this.escrow.parseSlice(file, 0));
     console.log(await this.escrow.parseSlice(file, 1));
     console.log(await this.escrow.parseSlice(file, 2));
     console.log(await this.escrow.parseFile(file));
+
+    const saveProof = await this.escrow.saveProof(offerId, file);
+    await saveProof.wait();
+
+    console.log(await this.escrow.getOffer(offerId));
   });
 
 });
