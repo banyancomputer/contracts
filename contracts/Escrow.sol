@@ -3,6 +3,7 @@ pragma solidity >= 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import 'solidity-bytes-utils/contracts/BytesLib.sol';
 import "./types/AccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 
@@ -10,6 +11,8 @@ import "hardhat/console.sol";
 
 contract Escrow is Context, AccessControlled
 {
+    using BytesLib for bytes;
+
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
@@ -147,5 +150,19 @@ contract Escrow is Context, AccessControlled
     function setTreasury(address _treasury) public onlyGovernor {
         require(_treasury != address(0), 'ERROR: TREASURY_ADDRESS_NOT_VALID');
         treasury = ITreasury(_treasury);
+    }
+
+    function parseFile(bytes memory fileSlice) public pure returns(bytes32[20] memory) {
+        bytes32[20] memory slices;
+        uint256 length = fileSlice.length/32 > 20 ? 20 : fileSlice.length/32;
+        for (uint i = 0; i < length; i++) {
+            slices[i] = parseSlice(fileSlice, i); 
+        }
+        return slices;
+    }
+
+    // cursor is 32 bytes step
+    function parseSlice(bytes memory file, uint256 cursor) public pure returns(bytes32) {        
+        return bytes32(file.slice(cursor*32, 32));
     }
 }

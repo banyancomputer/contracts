@@ -44,6 +44,7 @@
     "node-fetch": "^3.2.9",
     "npm-check-updates": "^16.0.1",
     "path": "^0.12.7",
+    "solidity-bytes-utils": "^0.8.0",
     "solidity-coverage": "^0.7.21",
     "ts-generator": "^0.1.1",
     "typechain": "^8.1.0"

@@ -1,6 +1,7 @@
 import { Authority } from "../types"; // just to redeclare this test scope
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const fs = require("fs");
 
 describe("Escrow", async () => {
 
@@ -93,6 +94,17 @@ describe("Escrow", async () => {
     expect(offerArray[3]).to.equal("");
   });
 
+  it("should get slices of a bao file", async function () {
+    const file = await fs.readFileSync("./test/1");
+    // console.log(file);
+    console.log(await this.escrow.parseSlice(file, 0));
+    console.log(await this.escrow.parseSlice(file, 1));
+    console.log(await this.escrow.parseSlice(file, 2));
+    console.log(await this.escrow.parseFile(file));
+  });
+
 });
+
+
 
 
