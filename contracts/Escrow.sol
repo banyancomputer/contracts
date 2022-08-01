@@ -169,4 +169,8 @@ contract Escrow is Context, AccessControlled
     function saveProof(uint256 offerId, bytes memory file) public {
         _transactions[offerId].proof = parseFile(file);
     }
+
+    function saveProofArrayOnly(uint256 offerId, bytes32[20] memory file) public {
+        _transactions[offerId].proof = file;
+    }
 }

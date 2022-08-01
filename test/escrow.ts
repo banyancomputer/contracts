@@ -106,8 +106,11 @@ describe("Escrow", async () => {
     console.log(await this.escrow.parseSlice(file, 0));
     console.log(await this.escrow.parseSlice(file, 1));
     console.log(await this.escrow.parseSlice(file, 2));
-    console.log(await this.escrow.parseFile(file));
+    const proofs = await this.escrow.parseFile(file);
 
+    console.log(proofs);
+
+    // const saveProof = await this.escrow.saveProofArrayOnly(offerId, proofs);
     const saveProof = await this.escrow.saveProof(offerId, file);
     await saveProof.wait();
 
