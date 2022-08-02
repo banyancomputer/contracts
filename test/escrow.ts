@@ -1,6 +1,7 @@
 import { Authority } from "../types"; // just to redeclare this test scope
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
 const fs = require("fs");
 
 describe("Escrow", async () => {
@@ -44,6 +45,7 @@ describe("Escrow", async () => {
       10, //creatorTokenAmount - used for ERC20 and ERC1155
       this.executorAddress, // executorAddress
       10, //executorTokenAmount - used for ERC20 and ERC1155
+      500 // CID
     ];
   });
     
@@ -94,7 +96,7 @@ describe("Escrow", async () => {
     expect(offerArray[3]).to.equal("");
   });
 
-  it("should get slices of a bao file", async function () {
+  it("should store a proof", async function () {
     const file = await fs.readFileSync("./test/1");
 
     const offer = await this.escrow.startOffer(...this.offerParams);
@@ -102,19 +104,64 @@ describe("Escrow", async () => {
 
     const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
     const offerId = offerResult[0].toNumber();
-    // console.log(file);
-    console.log(await this.escrow.parseSlice(file, 0));
-    console.log(await this.escrow.parseSlice(file, 1));
-    console.log(await this.escrow.parseSlice(file, 2));
-    const proofs = await this.escrow.parseFile(file);
 
-    console.log(proofs);
-
-    // const saveProof = await this.escrow.saveProofArrayOnly(offerId, proofs);
-    const saveProof = await this.escrow.saveProof(offerId, file);
+    const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
     await saveProof.wait();
 
-    console.log(await this.escrow.getOffer(offerId));
+    expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
+  });
+
+  it("should accept proofs only from the executer", async function () {
+    const file = await fs.readFileSync("./test/1");
+
+    const offer = await this.escrow.startOffer(...this.offerParams);
+    const offerTx = await offer.wait();
+
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
+    const offerId = offerResult[0].toNumber();
+
+    await expect(this.escrow.saveProof(offerId, file)).to.be.reverted;
+
+    const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+    await saveProof.wait();
+
+    expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
+  });
+
+  it("should store 5 proofs", async function () {
+    const file = await fs.readFileSync("./test/1");
+
+    const offer = await this.escrow.startOffer(...this.offerParams);
+    const offerTx = await offer.wait();
+
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
+    const offerId = offerResult[0].toNumber();
+
+    for (let i = 0; i < 5; i++) {
+      const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+      await saveProof.wait();
+      await mine(98);
+      expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
+    }
+  });
+
+  it("should store 3 proofs and miss 2 in between", async function () {
+    const file = await fs.readFileSync("./test/1");
+
+    const offer = await this.escrow.startOffer(...this.offerParams);
+    const offerTx = await offer.wait();
+
+    const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
+    const offerId = offerResult[0].toNumber();
+
+    for (let i = 0; i < 5; i++) {
+      const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+      await saveProof.wait();
+
+      await mine(i%2 ? 97 : 100); // miss blocks every 2nd block
+
+      expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
+    }
   });
 
 });
