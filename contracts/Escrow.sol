@@ -3,7 +3,6 @@ pragma solidity >= 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
-import 'solidity-bytes-utils/contracts/BytesLib.sol';
 import "./types/AccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 
@@ -11,8 +10,6 @@ import "hardhat/console.sol";
 
 contract Escrow is Context, AccessControlled
 {
-    using BytesLib for bytes;
-
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
@@ -23,11 +20,14 @@ contract Escrow is Context, AccessControlled
     uint256 private _offerId;
     string private _symbol;
     mapping(uint256 => Offer) internal _transactions;
+    mapping(uint256 => Proof) internal _proofs;
     mapping(address => uint256[]) internal _openOffers;
 
     uint256 private _openOfferAcc;
     uint256 private _totalOfferCompletedAcc;
     uint256 private _totalOfferClaimAcc;
+    
+    uint256 dailyBlocks;
 
     enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED  }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
@@ -37,6 +37,15 @@ contract Escrow is Context, AccessControlled
         uint256 amount;
         UserStatus offerorStatus;
     }
+
+    struct Proof {
+        mapping (uint256 => bytes) dailyProof; // block.number => proof
+        uint256[] dailyProofIndex; // array of block.number
+        uint256 dailyProofCount; // hack to avoid counting the proofs every time
+        uint256 missedDays; // number of days without a proof
+        uint256 startingBlock; // block.number at offer start
+        uint256 fileCID; // CID of the file containing the proof
+    }
     struct Offer {
         address token;
         address creator;
@@ -44,8 +53,6 @@ contract Escrow is Context, AccessControlled
         address executor;
         OfferCounterpart executorCounterpart;
         uint256 id;
-        bytes32[20] proof;
-        string description;
         OfferStatus offerStatus;
     }
 
@@ -56,11 +63,26 @@ contract Escrow is Context, AccessControlled
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
         _offerId = 0;
+        dailyBlocks = 100;
         treasury = ITreasury(authority.vault());
     }
 
+    modifier onlyExecutor(uint256 offerId) {
+        require(offerId != 0, "Invalid offer id");
+        Offer memory offer = _transactions[offerId];
+        require(offer.executor == msg.sender, "Only executor can perform this action");
+        _;
+    }
+        
+    modifier onlyCreator(uint256 offerId) {
+        require(offerId != 0, "Invalid offer id");
+        Offer memory offer = _transactions[offerId];
+        require(offer.creator == msg.sender, "Only creator can perform this action");
+        _;
+    }
+
     // TODO: refactor using eip 4626
-     function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount) public payable returns(uint256)
+     function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, uint256 cid) public payable returns(uint256)
     {
         require(executerAddress != address(0), 'EXECUTER_ADDRESS_NOT_VALID' );    
 
@@ -87,6 +109,13 @@ contract Escrow is Context, AccessControlled
         _openOffers[msg.sender].push(_offerId);
         _openOffers[executerAddress].push(_offerId);
 
+        // initialize proof with current block number
+        _proofs[_offerId].startingBlock = block.number;
+        _proofs[_offerId].dailyProofIndex.push(block.number);
+        _proofs[_offerId].fileCID = cid;
+        _proofs[_offerId].dailyProofCount = 0;
+        _proofs[_offerId].missedDays = 0;
+
         // Start moving funds to Treasury
         treasury.deposit(creatorAmount, token, msg.sender);
         treasury.deposit(executorAmount, token, executerAddress);
@@ -105,10 +134,10 @@ contract Escrow is Context, AccessControlled
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
-    function getOffer(uint256 offerId) public view returns (address, address, uint8, bytes32[20] memory)
+    function getOffer(uint256 offerId) public view returns (address, address, uint8)
     {
         Offer storage store = _transactions[offerId];
-        return (store.creator, store.executor, uint8(store.offerStatus), store.proof);
+        return (store.creator, store.executor, uint8(store.offerStatus));
     }
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
@@ -152,25 +181,42 @@ contract Escrow is Context, AccessControlled
         treasury = ITreasury(_treasury);
     }
 
-    function parseFile(bytes memory fileSlice) public pure returns(bytes32[20] memory) {
-        bytes32[20] memory slices;
-        uint256 length = fileSlice.length/32 > 20 ? 20 : fileSlice.length/32;
-        for (uint i = 0; i < length; i++) {
-            slices[i] = parseSlice(fileSlice, i); 
-        }
-        return slices;
+    // function that saves time of proof sending
+    function saveProof(uint256 offerId, bytes memory _proof) public onlyExecutor(offerId) {
+        require(_proof.length > 0); // check if proof is empty
+
+        // get latest proof array index
+        uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
+
+        // check how many blocks has passed
+        uint256 blocksPassed = block.number - _proofs[offerId].dailyProofIndex[lastProofIndex];
+
+        // save the number of days passed based without sending proofs (if any, solidity always rounds down)
+        _proofs[offerId].missedDays += blocksPassed / dailyBlocks;    
+        
+        // add today's proof, current block number and increment proof count
+        _proofs[offerId].dailyProof[block.number] = _proof;
+        _proofs[offerId].dailyProofIndex.push(block.number);
+        _proofs[offerId].dailyProofCount++;
     }
 
-    // cursor is 32 bytes step
-    function parseSlice(bytes memory file, uint256 cursor) public pure returns(bytes32) {        
-        return bytes32(file.slice(cursor*32, 32));
+    // get a proof for a specific block number for a specific offer
+    function getProof(uint256 offerId, uint256 blockNumber) public view returns(bytes memory) {
+        return _proofs[offerId].dailyProof[blockNumber];
     }
 
-    function saveProof(uint256 offerId, bytes memory file) public {
-        _transactions[offerId].proof = parseFile(file);
+    // get the latest proof sent for a specific offer
+    function getLatestProof(uint256 offerId) public view returns(bytes memory) {
+        uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
+        uint256 latestBlockNumber = _proofs[offerId].dailyProofIndex[lastProofIndex];
+        return _proofs[offerId].dailyProof[latestBlockNumber];
     }
 
-    function saveProofArrayOnly(uint256 offerId, bytes32[20] memory file) public {
-        _transactions[offerId].proof = file;
+    // get the block numbers of all proofs sent for a specific offer
+    function getProofBlockNumbers(uint256 offerId) public view returns(uint256[] memory) {
+        return _proofs[offerId].dailyProofIndex;
     }
+
+ 
+
 }
