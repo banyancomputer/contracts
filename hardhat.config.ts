@@ -45,6 +45,10 @@ function getChainConfig(network: keyof typeof chainIds): NetworkUserConfig {
   };
 }
 
+function getChainRPC(network: keyof typeof chainIds): string {
+  return `https://eth-${network}.alchemyapi.io/v2/${alchemyApiKey}`;
+}
+
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
@@ -61,6 +65,9 @@ const config: HardhatUserConfig = {
           },
           chainId: chainIds.hardhat,          
           loggingEnabled: process.env.EVM_LOGGING === "true",
+          forking: {
+            url: getChainRPC("mainnet")
+          }
       },
       fuji: {
           url: `https://avalanche--fuji--rpc.datahub.figment.io/apikey/${DATAHUB_API_KEY}/ext/bc/C/rpc`,
