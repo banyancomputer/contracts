@@ -1,6 +1,7 @@
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "@openzeppelin/hardhat-upgrades";
+import "@nomiclabs/hardhat-solhint";
 import "hardhat-abi-exporter";
 import "hardhat-deploy";
 import { resolve } from "path";
