@@ -220,7 +220,10 @@ contract Escrow is Context, AccessControlled
         return _proofs[offerId].dailyProofIndex;
     }
 
-   
+    function setDailyBlocks(uint256 _dailyBlocks) public onlyGovernor {
+        require(_dailyBlocks > 0, 'ERROR: DAILY_BLOCKS_MUST_POSITIVE');
+        dailyBlocks = _dailyBlocks;
+    }
  
 
 }
