@@ -3,13 +3,17 @@ pragma solidity >= 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+
 import "./types/AccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
-contract Escrow is Context, AccessControlled
+contract Escrow is ChainlinkClient, Context, AccessControlled
 {
+    using Chainlink for Chainlink.Request;
+
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
@@ -57,9 +61,22 @@ contract Escrow is Context, AccessControlled
         OfferStatus offerStatus;
     }
 
-    constructor(address _authority) AccessControlled(IAuthority(_authority))
+    /**
+    * @notice Deploy the contract with a specified address for the Authority, the LINK and Oracle contract addresses
+    * @dev Sets the storage for the specified addresses
+    * @param _authority Address of the Authority contract
+    * @param _link The address of the LINK token contract
+    */
+    constructor(address _authority, address _link) AccessControlled(IAuthority(_authority))
     {
         require(_authority != address(0));
+        
+        if (_link == address(0)) {
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
+
         _openOfferAcc = 0;
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
@@ -225,5 +242,59 @@ contract Escrow is Context, AccessControlled
         dailyBlocks = _dailyBlocks;
     }
  
+    /**
+    * @notice Returns the address of the LINK token
+    * @dev This is the public implementation for chainlinkTokenAddress, which is
+    * an internal method of the ChainlinkClient contract
+    */
+    function getChainlinkToken() public view returns (address) {
+        return chainlinkTokenAddress();
+    }
 
+    /**
+    * @notice Creates a request to the specified Oracle contract address
+    * @dev This function ignores the stored Oracle contract address and
+    * will instead send the request to the address specified
+    * @param _oracle The Oracle contract address to send the request to
+    * @param _jobId The bytes32 JobID to be executed
+    * @param _url The URL to fetch data from
+    * @param _path The dot-delimited path to parse of the response
+    */
+    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string memory _path) public onlyGovernor returns (bytes32 requestId) {
+        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
+        req.add("url", _url);
+        req.add("path", _path);
+        requestId = sendChainlinkRequestTo(_oracle, req, _payment);
+    }
+
+    /**
+    * @notice The fulfill method from requests created by this contract
+    * @dev The recordChainlinkFulfillment protects this function from being called
+    * by anyone other than the oracle address that the request was sent to
+    * @param _requestId The ID that was generated for the request
+    * @param _data The answer provided by the oracle
+    */
+    function fulfill(bytes32 _requestId, uint256 _data) public recordChainlinkFulfillment(_requestId) {
+       // CLOSE DEAL
+    }
+
+    /**
+    * @notice Allows the owner to withdraw any LINK balance on the contract
+    */
+    function withdrawLink() public onlyGovernor {
+        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
+    }
+
+    /**
+    * @notice Call this method if no response is received within 5 minutes
+    * @param _requestId The ID that was generated for the request to cancel
+    * @param _payment The payment specified for the request to cancel
+    * @param _callbackFunctionId The bytes4 callback function ID specified for
+    * the request to cancel
+    * @param _expiration The expiration generated for the request to cancel
+    */
+    function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyGovernor {    
+        cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
+    }
 }
