@@ -14,6 +14,7 @@ contract Escrow is Context, AccessControlled
     event FinishOffer(address indexed executor, uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
+    event ProofAdded(uint256 indexed offerId);
 
     ITreasury public treasury;
 
@@ -198,6 +199,8 @@ contract Escrow is Context, AccessControlled
         _proofs[offerId].dailyProof[block.number] = _proof;
         _proofs[offerId].dailyProofIndex.push(block.number);
         _proofs[offerId].dailyProofCount++;
+
+        emit ProofAdded(offerId);
     }
 
     // get a proof for a specific block number for a specific offer
@@ -217,6 +220,7 @@ contract Escrow is Context, AccessControlled
         return _proofs[offerId].dailyProofIndex;
     }
 
+   
  
 
 }
