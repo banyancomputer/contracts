@@ -27,7 +27,7 @@ describe("Treasury", async () => {
     await this.authority.pushVault(this.treasury.address, true);
     expect(await this.authority.vault()).to.equal(this.treasury.address);
 
-    this.escrow = await this.Escrow.deploy(this.authority.address);
+    this.escrow = await this.Escrow.deploy(this.authority.address, ethers.constants.AddressZero);
     await this.escrow.deployed();
 
     // ERC20Mock stuff
@@ -42,7 +42,8 @@ describe("Treasury", async () => {
       this.erc20Mock.address, // creatorTokenAddress
       1000, //creatorTokenAmount 
       this.executorAddress, // executorAddress
-      1000, //executorTokenAmount 
+      1000, //executorTokenAmount
+      500 // CID 
     ];
   });
     

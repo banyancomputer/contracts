@@ -10,3 +10,8 @@ export const CONTRACTS: Record<string, string> = {
 export const CONFIGURATION: Record<string, any> = {
     hardhatChainId: 1337,
 };
+
+export const CONSTANTS: Record<string, any> = {
+    ZERO_ADDRESS: "0x0000000000000000000000000000000000000000",
+    ZERO_BYTES32: "0x0000000000000000000000000000000000000000000000000000000000000000",
+};

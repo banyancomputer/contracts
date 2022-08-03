@@ -29,7 +29,7 @@ describe("Escrow", async () => {
     await this.authority.pushVault(this.treasury.address, true);
     expect(await this.authority.vault()).to.equal(this.treasury.address);
 
-    this.escrow = await this.Escrow.deploy(this.authority.address);
+    this.escrow = await this.Escrow.deploy(this.authority.address, ethers.constants.AddressZero);
     await this.escrow.deployed();
 
     // ERC20Mock stuff
@@ -93,7 +93,6 @@ describe("Escrow", async () => {
     expect(offerArray[0]).to.equal(this.ownerAddress);
     expect(offerArray[1]).to.equal(this.executorAddress);
     expect(offerArray[2]).to.equal(1);
-    expect(offerArray[3]).to.equal("");
   });
 
   it("should store a proof", async function () {

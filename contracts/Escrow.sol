@@ -275,7 +275,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * @param _data The answer provided by the oracle
     */
     function fulfill(bytes32 _requestId, uint256 _data) public recordChainlinkFulfillment(_requestId) {
-       // CLOSE DEAL
+       // TODO: CLOSE DEAL
     }
 
     /**

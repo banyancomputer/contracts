@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { CONTRACTS } from "../constants";
+import { CONTRACTS, CONSTANTS } from "../constants";
+
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     const { deployments, getNamedAccounts } = hre;
@@ -11,7 +12,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     await deploy(CONTRACTS.escrow, {
         from: deployer,
-        args: [authorityDeployment.address],
+        args: [authorityDeployment.address, CONSTANTS.ZERO_ADDRESS],
         log: true,
         skipIfAlreadyDeployed: true,
     });
