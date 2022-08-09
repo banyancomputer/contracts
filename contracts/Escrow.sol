@@ -38,7 +38,8 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     bytes32 private jobId;
     uint256 private payment;
     string private url;
-    string private path;
+    string[] private params;
+    string[] private paths;
     
     uint256 dailyBlocks;
 
@@ -322,14 +323,16 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * @param _jobId The bytes32 JobID to be executed
     * @param _payment The amount of LINK to be paid for the request
     * @param _url The URL to fetch data from
-    * @param _path The dot-delimited path to parse of the response
+    * @param _params The parameters to be sent to the Oracle
+    * @param _paths The dot-delimited path to parse of the response
     */
-    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string memory _path) public onlyGovernor {
+    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string[] memory _params, string[] memory _paths) public onlyGovernor {
         oracle = _oracle;
         jobId = _jobId;
         payment = _payment;
         url = _url;
-        path = _path;
+        params = _params;
+        paths = _paths;
     }
 
     function oracleRequest() public onlyGovernor returns (bytes32 requestId) {
@@ -341,5 +344,5 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
         emit OfferFinalized(offerId);
     }
 
-    
+
 }
