@@ -209,6 +209,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     // function that saves time of proof sending
     function saveProof(uint256 offerId, bytes memory _proof) public onlyExecutor(offerId) {
         require(_proof.length > 0); // check if proof is empty
+        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_CREATED, 'ERROR: OFFER_NOT_ACTIVE');
 
         // get latest proof array index
         uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
@@ -336,8 +337,9 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     }
 
     function finalize(uint256 offerId) internal {
-        _proofs[offerId].finalized = true;
-        //TODO: Send Payments
+        _transactions[offerId].offerStatus = OfferStatus.OFFER_COMPLETED;
         emit OfferFinalized(offerId);
     }
+
+    
 }
