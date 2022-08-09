@@ -336,7 +336,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     }
 
     function oracleRequest() public onlyGovernor returns (bytes32 requestId) {
-        return createRequestTo(oracle, jobId, payment, url, path);
+        return createRequestTo(oracle, jobId, payment, url, params, paths);
     }
 
     function finalize(uint256 offerId) internal {
