@@ -16,9 +16,10 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
 
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
     event FinishOffer(address indexed executor, uint256 offerId);
+    event OfferFinalized(uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
-    event ProofAdded(uint256 indexed offerId);
+    event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
 
     ITreasury public treasury;
 
@@ -31,6 +32,13 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     uint256 private _openOfferAcc;
     uint256 private _totalOfferCompletedAcc;
     uint256 private _totalOfferClaimAcc;
+
+    // Oracle Configuration
+    address private oracle;
+    bytes32 private jobId;
+    uint256 private payment;
+    string private url;
+    string private path;
     
     uint256 dailyBlocks;
 
@@ -44,7 +52,6 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     }
 
     struct Proof {
-        mapping (uint256 => bytes) dailyProof; // block.number => proof
         uint256[] dailyProofIndex; // array of block.number
         uint256 dailyProofCount; // hack to avoid counting the proofs every time
         uint256 missedDays; // number of days without a proof
@@ -213,11 +220,11 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
         _proofs[offerId].missedDays += blocksPassed / dailyBlocks;    
         
         // add today's proof, current block number and increment proof count
-        _proofs[offerId].dailyProof[block.number] = _proof;
         _proofs[offerId].dailyProofIndex.push(block.number);
         _proofs[offerId].dailyProofCount++;
 
-        emit ProofAdded(offerId);
+        // using logs to save storage space costs - read it using ethers.js' getLogs()
+        emit ProofAdded(offerId, block.number, _proof);
     }
 
     // get a proof for a specific block number for a specific offer
@@ -257,13 +264,17 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * will instead send the request to the address specified
     * @param _oracle The Oracle contract address to send the request to
     * @param _jobId The bytes32 JobID to be executed
+    * @param _payment The amount of LINK to be paid for the request
     * @param _url The URL to fetch data from
-    * @param _path The dot-delimited path to parse of the response
+    * @param _params The parameters to be sent to the Oracle
+    * @param _paths The dot-delimited paths to parse the response
     */
-    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string memory _path) public onlyGovernor returns (bytes32 requestId) {
-        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
-        req.add("url", _url);
-        req.add("path", _path);
+    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string[] memory _params, string[] memory _paths) public onlyGovernor returns (bytes32 requestId) {
+        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfillMultipleParameters.selector);
+        req.add("param1", _url + "?" + _params[0]);
+        req.add("param2", _url + "?" + _params[1]);
+        req.add("path_param1", _paths[0]);
+        req.add("path_param2", _paths[1]);
         requestId = sendChainlinkRequestTo(_oracle, req, _payment);
     }
 
@@ -272,10 +283,16 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * @dev The recordChainlinkFulfillment protects this function from being called
     * by anyone other than the oracle address that the request was sent to
     * @param _requestId The ID that was generated for the request
-    * @param _data The answer provided by the oracle
+    * @param _param1 The answer provided by the oracle - EXAMPLE: offerId
+    * @param _param2 The answer provided by the oracle - EXAMPLE: hash computation outcome    
     */
-    function fulfill(bytes32 _requestId, uint256 _data) public recordChainlinkFulfillment(_requestId) {
-       // TODO: CLOSE DEAL
+    function fulfill(bytes32 _requestId, uint256 _param1, uint256 _param2) public recordChainlinkFulfillment(_requestId) {
+        // TODO: check if _data contains valid proof of work completion
+        uint256 offerId = _param1; // EXAMPLE: the offerId is the first parameter in the response
+
+        if (_param2 > 0) { // just a dummy check to make sure the proof is valid
+            finalize(offerId);
+        }
     }
 
     /**
@@ -296,5 +313,31 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     */
     function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyGovernor {    
         cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
+    }
+
+    /**
+    * @notice Oracle parameters for the request to be sent to the Oracle contract
+    * @param _oracle The Oracle contract address to send the request to
+    * @param _jobId The bytes32 JobID to be executed
+    * @param _payment The amount of LINK to be paid for the request
+    * @param _url The URL to fetch data from
+    * @param _path The dot-delimited path to parse of the response
+    */
+    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string memory _path) public onlyGovernor {
+        oracle = _oracle;
+        jobId = _jobId;
+        payment = _payment;
+        url = _url;
+        path = _path;
+    }
+
+    function oracleRequest() public onlyGovernor returns (bytes32 requestId) {
+        return createRequestTo(oracle, jobId, payment, url, path);
+    }
+
+    function finalize(uint256 offerId) internal {
+        _proofs[offerId].finalized = true;
+        //TODO: Send Payments
+        emit OfferFinalized(offerId);
     }
 }
