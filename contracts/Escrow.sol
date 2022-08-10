@@ -4,13 +4,15 @@ pragma solidity >= 0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import '@chainlink/contracts/src/v0.8/ConfirmedOwner.sol';
+
 
 import "./types/AccessControlled.sol";
 import "./interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
-contract Escrow is ChainlinkClient, Context, AccessControlled
+contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
 {
     using Chainlink for Chainlink.Request;
 
@@ -28,6 +30,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     mapping(uint256 => Offer) internal _transactions;
     mapping(uint256 => Proof) internal _proofs;
     mapping(address => uint256[]) internal _openOffers;
+    mapping(uint256 => uint256) _proofSuccessRate; // offerId => proofSuccessRate (0-100000; 100000 = 100%)
 
     uint256 private _openOfferAcc;
     uint256 private _totalOfferCompletedAcc;
@@ -43,7 +46,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     
     uint256 dailyBlocks;
 
-    enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED  }
+    enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED, OFFER_WITHDRAWN }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
 
     struct OfferCounterpart {
@@ -75,7 +78,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * @param _authority Address of the Authority contract
     * @param _link The address of the LINK token contract
     */
-    constructor(address _authority, address _link) AccessControlled(IAuthority(_authority))
+    constructor(address _authority, address _link) AccessControlled(IAuthority(_authority)) ConfirmedOwner(msg.sender)
     {
         require(_authority != address(0));
         
@@ -137,7 +140,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
 
         // initialize proof with current block number
         _proofs[_offerId].startingBlock = block.number;
-        _proofs[_offerId].dailyProofIndex.push(block.number);
+        _proofs[_offerId].dailyProofIndex.push(block.number); // TODO: get rid of costly push (maybe use struct?)
         _proofs[_offerId].fileCID = cid;
         _proofs[_offerId].dailyProofCount = 0;
         _proofs[_offerId].missedDays = 0;
@@ -228,19 +231,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
         // using logs to save storage space costs - read it using ethers.js' getLogs()
         emit ProofAdded(offerId, block.number, _proof);
     }
-
-    // get a proof for a specific block number for a specific offer
-    function getProof(uint256 offerId, uint256 blockNumber) public view returns(bytes memory) {
-        return _proofs[offerId].dailyProof[blockNumber];
-    }
-
-    // get the latest proof sent for a specific offer
-    function getLatestProof(uint256 offerId) public view returns(bytes memory) {
-        uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
-        uint256 latestBlockNumber = _proofs[offerId].dailyProofIndex[lastProofIndex];
-        return _proofs[offerId].dailyProof[latestBlockNumber];
-    }
-
+ 
     // get the block numbers of all proofs sent for a specific offer
     function getProofBlockNumbers(uint256 offerId) public view returns(uint256[] memory) {
         return _proofs[offerId].dailyProofIndex;
@@ -272,9 +263,9 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
     * @param _paths The dot-delimited paths to parse the response
     */
     function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string[] memory _params, string[] memory _paths) public onlyGovernor returns (bytes32 requestId) {
-        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfillMultipleParameters.selector);
-        req.add("param1", _url + "?" + _params[0]);
-        req.add("param2", _url + "?" + _params[1]);
+        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
+        req.add("param1", string(abi.encodePacked(_url, _params[0])));
+        req.add("param2", string(abi.encodePacked(_url, _params[1])));
         req.add("path_param1", _paths[0]);
         req.add("path_param2", _paths[1]);
         requestId = sendChainlinkRequestTo(_oracle, req, _payment);
@@ -294,6 +285,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
 
         if (_param2 > 0) { // just a dummy check to make sure the proof is valid
             finalize(offerId);
+            prepWithdrawal(offerId, _param2);
         }
     }
 
@@ -331,7 +323,7 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
         jobId = _jobId;
         payment = _payment;
         url = _url;
-        params = _params;
+        params = _params; // needs to be dinamically obtained per offer
         paths = _paths;
     }
 
@@ -343,6 +335,13 @@ contract Escrow is ChainlinkClient, Context, AccessControlled
         _transactions[offerId].offerStatus = OfferStatus.OFFER_COMPLETED;
         emit OfferFinalized(offerId);
     }
+
+    function prepWithdrawal(uint256 offerId, uint256 successfulProofs) internal {
+        // TODO: include here any other logic to determine the amount of payment to be withdrawn
+        _proofSuccessRate[offerId] = (successfulProofs / _proofs[offerId].dailyProofCount) * 100;
+    }
+
+    // TODO: withdrawl function: take the cut from bounty pot based on success rate and send to the executor
 
 
 }
