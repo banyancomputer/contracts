@@ -1,20 +1,32 @@
 import { Authority } from "../types"; // just to redeclare this test scope
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
+
+import { mine, impersonateAccount, time } from "@nomicfoundation/hardhat-network-helpers";
 const fs = require("fs");
 
 describe("Escrow", async () => {
 
   before(async function () {
+    // juiced accounts - used when testing with forking
+    const MAINNET_JUICED_WALLET = "0x5a52E96BAcdaBb82fd05763E25335261B270Efcb"; // lots of ether, usdt, link, etc
+    await impersonateAccount(MAINNET_JUICED_WALLET);
+
+    const RINKEBY_JUICED_WALLET = "0xFED4DdB595F42a5DBf48b9f318AD9b8E2685c27b"; // lots if link
+    await impersonateAccount(RINKEBY_JUICED_WALLET);
+    
     this.ERC20Mock = await ethers.getContractFactory("BanyanERC20Mock");
 
     this.Authority = await ethers.getContractFactory("Authority");
     this.Treasury = await ethers.getContractFactory("Treasury");
     this.Escrow = await ethers.getContractFactory("Escrow");
+
     [ this.owner, this.executor ] = await ethers.getSigners();
+    this.juicedAccountMainnet = await ethers.getSigner(MAINNET_JUICED_WALLET);
+    this.juicedAccountRinkeby = await ethers.getSigner(RINKEBY_JUICED_WALLET);
     this.ownerAddress = await this.owner.getAddress();
     this.executorAddress = await this.executor.getAddress();
+    
 
     const abiEscrow = require('../artifacts/contracts/Escrow.sol/Escrow.json').abi;
     this.EscrowInterface = new ethers.utils.Interface(abiEscrow);
