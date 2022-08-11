@@ -14,4 +14,6 @@ interface ITreasury {
         uint256 _amount,
         address _token,        
         address _sender) external;
+
+    function withdraw(address _token, address _creator, uint256 _creatorCounterpart, address _executor, uint256 _executorCounterpart, uint256 _cut) external;
 }
