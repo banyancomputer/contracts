@@ -367,7 +367,7 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
             cut
             );
         
-
+        _transactions[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
     }
 
 }
