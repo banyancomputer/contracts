@@ -4,7 +4,7 @@ pragma solidity >= 0.8.9;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import '@chainlink/contracts/src/v0.8/ConfirmedOwner.sol';
+import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 
 
 import "./types/AccessControlled.sol";

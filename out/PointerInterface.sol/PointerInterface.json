@@ -36,12 +36,12 @@
       ]
     },
     "nodeType": "SourceUnit",
-    "src": "32:113:25",
+    "src": "32:113:62",
     "nodes": [
       {
         "id": 24949,
         "nodeType": "PragmaDirective",
-        "src": "32:23:25",
+        "src": "32:23:62",
         "literals": [
           "solidity",
           "^",
@@ -52,23 +52,23 @@
       {
         "id": 24955,
         "nodeType": "ContractDefinition",
-        "src": "57:87:25",
+        "src": "57:87:62",
         "nodes": [
           {
             "id": 24954,
             "nodeType": "FunctionDefinition",
-            "src": "88:54:25",
+            "src": "88:54:62",
             "functionSelector": "38cc4831",
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "getAddress",
-            "nameLocation": "97:10:25",
+            "nameLocation": "97:10:62",
             "parameters": {
               "id": 24950,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "107:2:25"
+              "src": "107:2:62"
             },
             "returnParameters": {
               "id": 24953,
@@ -82,7 +82,7 @@
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
                   "scope": 24954,
-                  "src": "133:7:25",
+                  "src": "133:7:62",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -93,7 +93,7 @@
                     "id": 24951,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "133:7:25",
+                    "src": "133:7:62",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -103,7 +103,7 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "132:9:25"
+              "src": "132:9:62"
             },
             "scope": 24955,
             "stateMutability": "view",
@@ -121,12 +121,12 @@
           24955
         ],
         "name": "PointerInterface",
-        "nameLocation": "67:16:25",
+        "nameLocation": "67:16:62",
         "scope": 24956,
         "usedErrors": []
       }
     ],
     "license": "MIT"
   },
-  "id": 25
+  "id": 62
 }

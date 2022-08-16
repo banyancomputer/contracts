@@ -54,8 +54,8 @@
       }
     },
     "contracts/Escrow.sol": {
-      "lastModificationDate": 1660679998325,
-      "contentHash": "230b5fa8d8468ace84feaf01a835c110",
+      "lastModificationDate": 1660681562972,
+      "contentHash": "c90cc7f3a1b722da6f174f7d5d0584b2",
       "sourceName": "contracts/Escrow.sol",
       "solcConfig": {
         "settings": {
@@ -1277,7 +1277,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "AccessControl": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "AccessControl.sol/AccessControl.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/access/AccessControl.sol/AccessControl.json"
         }
       }
     },
@@ -1324,7 +1324,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "AccessControlEnumerable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "AccessControlEnumerable.sol/AccessControlEnumerable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/access/AccessControlEnumerable.sol/AccessControlEnumerable.json"
         }
       }
     },
@@ -1362,7 +1362,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IAccessControl": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IAccessControl.sol/IAccessControl.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/access/IAccessControl.sol/IAccessControl.json"
         }
       }
     },
@@ -1402,7 +1402,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IAccessControlEnumerable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IAccessControlEnumerable.sol/IAccessControlEnumerable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/access/IAccessControlEnumerable.sol/IAccessControlEnumerable.json"
         }
       }
     },
@@ -1442,7 +1442,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "Ownable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Ownable.sol/Ownable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/access/Ownable.sol/Ownable.json"
         }
       }
     },
@@ -1482,7 +1482,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "Pausable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Pausable.sol/Pausable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/security/Pausable.sol/Pausable.json"
         }
       }
     },
@@ -1528,7 +1528,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC1155": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155.sol/ERC1155.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC1155/ERC1155.sol/ERC1155.json"
         }
       }
     },
@@ -1568,7 +1568,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC1155": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC1155.sol/IERC1155.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC1155/IERC1155.sol/IERC1155.json"
         }
       }
     },
@@ -1608,7 +1608,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC1155Receiver": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC1155Receiver.sol/IERC1155Receiver.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC1155/IERC1155Receiver.sol/IERC1155Receiver.json"
         }
       }
     },
@@ -1655,7 +1655,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC1155Burnable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155Burnable.sol/ERC1155Burnable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155/extensions/ERC1155Burnable.sol/ERC1155Burnable.json"
         }
       }
     },
@@ -1703,7 +1703,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC1155Pausable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155Pausable.sol/ERC1155Pausable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155/extensions/ERC1155Pausable.sol/ERC1155Pausable.json"
         }
       }
     },
@@ -1744,7 +1744,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC1155MetadataURI": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC1155MetadataURI.sol/IERC1155MetadataURI.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155/extensions/IERC1155MetadataURI.sol/IERC1155MetadataURI.json"
         }
       }
     },
@@ -1800,7 +1800,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC1155PresetMinterPauser": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155PresetMinterPauser.sol/ERC1155PresetMinterPauser.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC1155/presets/ERC1155PresetMinterPauser.sol/ERC1155PresetMinterPauser.json"
         }
       }
     },
@@ -1842,7 +1842,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC20": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20.sol/ERC20.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC20/ERC20.sol/ERC20.json"
         }
       }
     },
@@ -1880,7 +1880,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC20": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC20.sol/IERC20.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC20/IERC20.sol/IERC20.json"
         }
       }
     },
@@ -1923,7 +1923,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC20Burnable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20Burnable.sol/ERC20Burnable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20/extensions/ERC20Burnable.sol/ERC20Burnable.json"
         }
       }
     },
@@ -1963,7 +1963,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC20Metadata": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC20Metadata.sol/IERC20Metadata.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20/extensions/IERC20Metadata.sol/IERC20Metadata.json"
         }
       }
     },
@@ -2001,7 +2001,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC20Permit": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "draft-IERC20Permit.sol/IERC20Permit.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20/extensions/draft-IERC20Permit.sol/IERC20Permit.json"
         }
       }
     },
@@ -2045,7 +2045,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC20PresetFixedSupply": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20PresetFixedSupply.sol/ERC20PresetFixedSupply.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20/presets/ERC20PresetFixedSupply.sol/ERC20PresetFixedSupply.json"
         }
       }
     },
@@ -2087,7 +2087,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "SafeERC20": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "SafeERC20.sol/SafeERC20.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC20/utils/SafeERC20.sol/SafeERC20.json"
         }
       }
     },
@@ -2134,7 +2134,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC721": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721.sol/ERC721.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC721/ERC721.sol/ERC721.json"
         }
       }
     },
@@ -2174,7 +2174,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC721": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC721.sol/IERC721.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC721/IERC721.sol/IERC721.json"
         }
       }
     },
@@ -2212,7 +2212,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC721Receiver": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC721Receiver.sol/IERC721Receiver.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "token/ERC721/IERC721Receiver.sol/IERC721Receiver.json"
         }
       }
     },
@@ -2260,7 +2260,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC721Burnable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721Burnable.sol/ERC721Burnable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/extensions/ERC721Burnable.sol/ERC721Burnable.json"
         }
       }
     },
@@ -2309,7 +2309,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC721Enumerable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721Enumerable.sol/ERC721Enumerable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/extensions/ERC721Enumerable.sol/ERC721Enumerable.json"
         }
       }
     },
@@ -2358,7 +2358,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC721Pausable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721Pausable.sol/ERC721Pausable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/extensions/ERC721Pausable.sol/ERC721Pausable.json"
         }
       }
     },
@@ -2399,7 +2399,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC721Enumerable": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC721Enumerable.sol/IERC721Enumerable.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/extensions/IERC721Enumerable.sol/IERC721Enumerable.json"
         }
       }
     },
@@ -2440,7 +2440,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC721Metadata": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC721Metadata.sol/IERC721Metadata.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/extensions/IERC721Metadata.sol/IERC721Metadata.json"
         }
       }
     },
@@ -2499,7 +2499,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC721PresetMinterPauserAutoId": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721PresetMinterPauserAutoId.sol/ERC721PresetMinterPauserAutoId.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC721/presets/ERC721PresetMinterPauserAutoId.sol/ERC721PresetMinterPauserAutoId.json"
         }
       }
     },
@@ -2537,7 +2537,7 @@
       "versionRequirement": "^0.8.1",
       "artifacts": {
         "Address": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Address.sol/Address.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/utils/Address.sol/Address.json"
         }
       }
     },
@@ -2575,7 +2575,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "Context": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Context.sol/Context.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/utils/Context.sol/Context.json"
         }
       }
     },
@@ -2613,7 +2613,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "Counters": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Counters.sol/Counters.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/utils/Counters.sol/Counters.json"
         }
       }
     },
@@ -2651,7 +2651,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "Strings": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "Strings.sol/Strings.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "contracts/utils/Strings.sol/Strings.json"
         }
       }
     },
@@ -2691,7 +2691,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "ERC165": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "ERC165.sol/ERC165.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "utils/introspection/ERC165.sol/ERC165.json"
         }
       }
     },
@@ -2729,7 +2729,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "IERC165": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "IERC165.sol/IERC165.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "utils/introspection/IERC165.sol/IERC165.json"
         }
       }
     },
@@ -2767,7 +2767,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "SafeMath": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "SafeMath.sol/SafeMath.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "utils/math/SafeMath.sol/SafeMath.json"
         }
       }
     },
@@ -2805,7 +2805,7 @@
       "versionRequirement": "^0.8.0",
       "artifacts": {
         "EnumerableSet": {
-          "0.8.16+commit.07a7930e.Darwin.appleclang": "EnumerableSet.sol/EnumerableSet.json"
+          "0.8.16+commit.07a7930e.Darwin.appleclang": "utils/structs/EnumerableSet.sol/EnumerableSet.json"
         }
       }
     },
