@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "yarn snapshot && forge test && npx hardhat test",
+    "snapshot": "forge clean && forge snapshot"
   },
   "repository": {
     "type": "git",

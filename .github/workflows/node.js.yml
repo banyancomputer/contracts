@@ -1,8 +1,6 @@
 # This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-
-
 name: Contracts
 
 on:
@@ -67,9 +65,7 @@ jobs:
         echo SNOWTRACE_API_KEY=${{ secrets.SNOWTRACE_API_KEY }} >> .env
         echo TOKEN_OWNER_PK=${{ secrets.TOKEN_OWNER_PK }} >> .env
         echo ETHERSCAN_API_KEY=${{ secrets.ETHERSCAN_API_KEY }} >> .env        
-
     - name: deploy
       run: |
         npm ci
         npx hardhat deploy --network rinkeby
-    
