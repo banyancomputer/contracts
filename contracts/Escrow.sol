@@ -110,6 +110,13 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         _;
     }
 
+    modifier onlyParticipant(uint256 offerId) {
+        require(offerId != 0, "Invalid offer id");
+        Offer memory offer = _transactions[offerId];
+        require(offer.creator == msg.sender || offer.executor == msg.sender, "Only creator or executor can perform this action");
+        _;
+    }
+
     // TODO: refactor using eip 4626
      function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, uint256 cid) public payable returns(uint256)
     {
@@ -266,8 +273,10 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
         req.add("param1", string(abi.encodePacked(_url, _params[0])));
         req.add("param2", string(abi.encodePacked(_url, _params[1])));
+        req.add("param3", string(abi.encodePacked(_url, _params[2])));
         req.add("path_param1", _paths[0]);
         req.add("path_param2", _paths[1]);
+        req.add("path_param3", _paths[2]);
         requestId = sendChainlinkRequestTo(_oracle, req, _payment);
     }
 
@@ -278,12 +287,13 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     * @param _requestId The ID that was generated for the request
     * @param _param1 The answer provided by the oracle - EXAMPLE: offerId
     * @param _param2 The answer provided by the oracle - EXAMPLE: hash computation outcome
+    * @param _param3 The answer provided by the oracle
     */
-    function fulfill(bytes32 _requestId, uint256 _param1, uint256 _param2) public recordChainlinkFulfillment(_requestId) {
+    function fulfill(bytes32 _requestId, uint256 _param1, uint256 _param2, uint256 _param3) public recordChainlinkFulfillment(_requestId) {
         // TODO: check if _data contains valid proof of work completion
         uint256 offerId = _param1; // EXAMPLE: the offerId is the first parameter in the response
 
-        if (_param2 > 0) { // just a dummy check to make sure the proof is valid
+        if (_param2 > 0 && _param3 > 0) { // just a dummy check to make sure the proof is valid
             finalize(offerId);
             prepWithdrawal(offerId, _param2);
         }
@@ -341,7 +351,23 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         _proofSuccessRate[offerId] = (successfulProofs / _proofs[offerId].dailyProofCount) * 100;
     }
 
-    // TODO: withdrawl function: take the cut from bounty pot based on success rate and send to the executor
+    function withdraw(uint256 offerId) public onlyParticipant(offerId) {
+        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
+        require(_proofSuccessRate[offerId] > 0, "ERROR: NO_SUCCESSFUL_PROOFS");
+        require(_proofSuccessRate[offerId] < 100, "ERROR: ALL_PROOFS_SUCCESSFUL");
 
+        uint256 cut = ((_proofSuccessRate[offerId] * _transactions[offerId].creatorCounterpart.amount) / 100 );
+        
+        treasury.withdraw(
+            _transactions[offerId].token,
+            _transactions[offerId].creator, 
+            _transactions[offerId].creatorCounterpart.amount,
+            _transactions[offerId].executor, 
+            _transactions[offerId].executorCounterpart.amount,
+            cut
+            );
+        
+        _transactions[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
+    }
 
 }
