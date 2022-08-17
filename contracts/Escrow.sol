@@ -339,7 +339,7 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     function withdraw(uint256 offerId) public onlyParticipant(offerId) {
         require(_transactions[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
         require(_proofSuccessRate[offerId] > 0, "ERROR: NO_SUCCESSFUL_PROOFS");
-        require(_proofSuccessRate[offerId] < 100, "ERROR: ALL_PROOFS_SUCCESSFUL");
+        require(_proofSuccessRate[offerId] < 100, "ERROR: ALL_PROOFS_SUCCESSFUL"); //TODO: Refactor this.
 
         uint256 cut = ((_proofSuccessRate[offerId] * _transactions[offerId].creatorCounterpart.amount) / 100 );
         
