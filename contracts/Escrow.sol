@@ -30,7 +30,7 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     mapping(uint256 => Offer) internal _transactions;
     mapping(uint256 => Proof) internal _proofs;
     mapping(address => uint256[]) internal _openOffers;
-    mapping(uint256 => uint256) _proofSuccessRate; // offerId => proofSuccessRate (0-100000; 100000 = 100%)
+    mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-100000; 100000 = 100%)
 
     uint256 private _openOfferAcc;
     uint256 private _totalOfferCompletedAcc;
@@ -40,11 +40,9 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     address private oracle;
     bytes32 private jobId;
     uint256 private payment;
-    string private url;
-    string[] private params;
     string[] private paths;
     
-    uint256 dailyBlocks;
+    uint256 private dailyBlocks; //@audit-issue this requires refactoring - block amounts do not stay as a flat amount daily. Create a timestamping mechanic that tracks when the last proof was submitted.
 
     enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED, OFFER_WITHDRAWN }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
@@ -95,28 +93,28 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     modifier onlyExecutor(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
         Offer memory offer = _transactions[offerId];
-        require(offer.executor == msg.sender, "Only executor can perform this action");
+        require(offer.executor == msg.sender, "Only executor");
         _;
     }
         
     modifier onlyCreator(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
         Offer memory offer = _transactions[offerId];
-        require(offer.creator == msg.sender, "Only creator can perform this action");
+        require(offer.creator == msg.sender, "Only creator");
         _;
     }
 
     modifier onlyParticipant(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
         Offer memory offer = _transactions[offerId];
-        require(offer.creator == msg.sender || offer.executor == msg.sender, "Only creator or executor can perform this action");
+        require(offer.creator == msg.sender || offer.executor == msg.sender, "Only creator or executor");
         _;
     }
 
     // TODO: refactor using eip 4626
      function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, uint256 cid) public payable returns(uint256)
     {
-        require(executerAddress != address(0), 'EXECUTER_ADDRESS_NOT_VALID' );    
+        require(executerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
 
         _offerId++;
         _transactions[_offerId].id = _offerId;
@@ -160,8 +158,8 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     function cancelOffer(uint256 offerId) public  returns (bool)
     {
         Offer storage store = _transactions[offerId];
-        require(store.offerStatus == OfferStatus.OFFER_CREATED, 'ERROR: OFFER_STATUS ISNT CREATED');
-        require(store.executor == msg.sender || store.creator == msg.sender , 'ERROR: EXECUTER ISNT CREATOR OR EXECUTER');
+        require(store.offerStatus == OfferStatus.OFFER_CREATED, "OFFER_STATUS ISNT CREATED");
+        require(store.executor == msg.sender || store.creator == msg.sender , "UNAUTHORIZED");
         _transactions[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
         emit OfferCancelled(msg.sender, offerId);
         return true;
@@ -173,16 +171,16 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     }
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
-        require(amount <= IERC20(tokenAddress).balanceOf(from), 'ERROR: ERR_NOT_ENOUGH_FUNDS_ERC20');
-        require(amount <= IERC20(tokenAddress).allowance(from, authority.vault() ), 'ERROR: ERR_NOT_ALLOW_SPEND_FUNDS');
+        require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
+        require(amount <= IERC20(tokenAddress).allowance(from, authority.vault() ), "UNAUTHORIZED");
         return true;
     }
 
     
     function verifyOfferIntegrity(address tokenAddress,  uint256 amount) public pure returns(bool)
     {
-        require(tokenAddress != address(0), 'ERROR: CREATOR_CONTRACT_NOT_VALID' );
-        require(amount > 0  , 'ERROR: AMOUNT_MUST_POSITIVE');
+        require(tokenAddress != address(0), "INVALID TOKENADDR");
+        require(amount > 0  , "MUST BE > 0 AMT");
         return true;
     }
 
@@ -209,14 +207,14 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     }
 
     function setTreasury(address _treasury) public onlyGovernor {
-        require(_treasury != address(0), 'ERROR: TREASURY_ADDRESS_NOT_VALID');
+        require(_treasury != address(0), "INVALID ADDRESS");
         treasury = ITreasury(_treasury);
     }
 
     // function that saves time of proof sending
     function saveProof(uint256 offerId, bytes memory _proof) public onlyExecutor(offerId) {
-        require(_proof.length > 0); // check if proof is empty
-        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_CREATED, 'ERROR: OFFER_NOT_ACTIVE');
+        require(_proof.length > 0, "No proof provided"); // check if proof is empty
+        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
 
         // get latest proof array index
         uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
@@ -241,7 +239,7 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     }
 
     function setDailyBlocks(uint256 _dailyBlocks) public onlyGovernor {
-        require(_dailyBlocks > 0, 'ERROR: DAILY_BLOCKS_MUST_POSITIVE');
+        require(_dailyBlocks > 0, "MUST BE POSITIVE");
         dailyBlocks = _dailyBlocks;
     }
  
@@ -315,21 +313,17 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     * @param _oracle The Oracle contract address to send the request to
     * @param _jobId The bytes32 JobID to be executed
     * @param _payment The amount of LINK to be paid for the request
-    * @param _url The URL to fetch data from
-    * @param _params The parameters to be sent to the Oracle
-    * @param _paths The dot-delimited path to parse of the response
+    * @param _paths The parameters to be sent to the Oracle
     */
-    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string[] memory _params, string[] memory _paths) public onlyGovernor {
+    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string[] memory _paths) public onlyGovernor {
         oracle = _oracle;
         jobId = _jobId;
         payment = _payment;
-        url = _url;
-        params = _params; // needs to be dinamically obtained per offer
-        paths = _paths;
+        paths = _paths; // needs to be dinamically obtained per offer
     }
 
     function oracleRequest() public onlyGovernor returns (bytes32 requestId) {
-        return createRequestTo(oracle, jobId, payment, url, params, paths);
+        return createRequestTo(oracle, jobId, payment, paths);
     }
 
     function finalize(uint256 offerId) internal {

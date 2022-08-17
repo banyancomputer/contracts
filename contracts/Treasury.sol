@@ -124,7 +124,7 @@ contract Treasury is Context, AccessControlled {
     }
 
     function setFee(uint256 _fee) public onlyGovernor {
-        require(_fee < 10000); // _fee must be less than 100%
+        require(_fee < 10000, "_fee must be less than 100%");
         fee = _fee;
     }
 
