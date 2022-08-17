@@ -80,13 +80,9 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     */
     constructor(address _authority, address _link) AccessControlled(IAuthority(_authority)) ConfirmedOwner(msg.sender)
     {
-        require(_authority != address(0));
+        require(_authority != address(0), "Unauthorized");
         
-        if (_link == address(0)) {
-            setPublicChainlinkToken();
-        } else {
-            setChainlinkToken(_link);
-        }
+        setChainlinkToken(_link);
 
         _openOfferAcc = 0;
         _totalOfferCompletedAcc = 0;
