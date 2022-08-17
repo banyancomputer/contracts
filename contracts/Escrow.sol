@@ -259,17 +259,12 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     * @dev This function ignores the stored Oracle contract address and
     * will instead send the request to the address specified
     * @param _oracle The Oracle contract address to send the request to
-    * @param _jobId The bytes32 JobID to be executed (??)
+    * @param _jobId The bytes32 JobID to be executed
     * @param _payment The amount of LINK to be paid for the request
-    * @param _url The URL to fetch data from (??)
-    * @param _params The parameters to be sent to the Oracle (offerID, blockNumber)
     * @param _paths The dot-delimited paths to parse the response
     */
-    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string memory _url, string[] memory _params, string[] memory _paths) internal onlyGovernor returns (bytes32 requestId) {
+    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string[] memory _paths) internal onlyGovernor returns (bytes32 requestId) {
         Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
-        req.add("param1", string(abi.encodePacked(_url, _params[0])));
-        req.add("param2", string(abi.encodePacked(_url, _params[1])));
-        req.add("param3", string(abi.encodePacked(_url, _params[2])));
         req.add("path_param1", _paths[0]);
         req.add("path_param2", _paths[1]);
         req.add("path_param3", _paths[2]);
