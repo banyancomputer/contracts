@@ -25,15 +25,6 @@ contract Treasury is Context, AccessControlled {
         RESERVESPENDER
     }
 
-    enum TokenType   { 
-        NON, 
-        ERC20, 
-        ERC1155, 
-        ERC721, 
-        NATIVE 
-    }
-
-
     /* ========== STATE VARIABLES ========== */
 
     string internal notApproved = "Treasury: not approved";
@@ -47,7 +38,6 @@ contract Treasury is Context, AccessControlled {
 
     // Treasury balance
     mapping(address => uint256) public erc20Treasury; // tokenAddress => feePot
-    mapping(address => mapping(uint256 => uint256)) public erc1155Treasury; // tokenAddress => tokenId => feePot
 
     /* ========== CONSTRUCTOR ========== */
 
