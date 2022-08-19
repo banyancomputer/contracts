@@ -2,17 +2,17 @@
 pragma solidity >= 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
-
-
-import "./types/AccessControlled.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./interfaces/IEscrow.sol";
 import "./interfaces/ITreasury.sol";
 
 import "hardhat/console.sol";
 
-contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
+contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IEscrow
 {
     using Chainlink for Chainlink.Request;
 
@@ -24,9 +24,10 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
 
     ITreasury public treasury;
+    address public vault;
+    address public override governor;
 
     uint256 private _offerId;
-    string private _symbol;
     mapping(uint256 => Offer) internal _transactions;
     mapping(uint256 => Proof) internal _proofs;
     mapping(address => uint256[]) internal _openOffers;
@@ -41,8 +42,6 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     bytes32 private jobId;
     uint256 private payment;
     string[] private paths;
-    
-    uint256 private dailyBlocks; //@audit-issue this requires refactoring - block amounts do not stay as a flat amount daily. Create a timestamping mechanic that tracks when the last proof was submitted.
 
     enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED, OFFER_WITHDRAWN }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
@@ -70,15 +69,31 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         OfferStatus offerStatus;
     }
 
+    error UNAUTHORIZED();
+    error AUTHORITY_INITIALIZED();
+
     /**
     * @notice Deploy the contract with a specified address for the Authority, the LINK and Oracle contract addresses
     * @dev Sets the storage for the specified addresses
-    * @param _authority Address of the Authority contract
+    * @param _governor Address of the Govenor contract
+    * @param _vault Address of the Treasury contract
     * @param _link The address of the LINK token contract
     */
-    constructor(address _authority, address _link) AccessControlled(IAuthority(_authority)) ConfirmedOwner(msg.sender)
+
+    constructor(address _link, address _governor, address _vault) {
+        _initialize(msg.sender, _link, _governor, _vault);
+        vault = _vault;
+    }
+
+    function _initialize(address _authority, address _link, address _governor, address _treasury) internal initializer
     {
-        require(_authority != address(0), "Unauthorized");
+        require(_authority != address(0), "0 Address Revert");
+        
+        __Ownable_init();
+
+
+        governor = _governor;
+        treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
 
@@ -86,8 +101,13 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
         _offerId = 0;
-        dailyBlocks = 100;
-        treasury = ITreasury(authority.vault());
+    }
+
+    /* ========== "MODIFIERS" ========== */
+
+    modifier onlyGovernor {
+	    if (msg.sender != governor) revert UNAUTHORIZED();
+	_;
     }
 
     modifier onlyExecutor(uint256 offerId) {
@@ -172,7 +192,7 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
-        require(amount <= IERC20(tokenAddress).allowance(from, authority.vault() ), "UNAUTHORIZED");
+        require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
         return true;
     }
 
@@ -216,14 +236,11 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_transactions[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
 
-        // get latest proof array index
-        uint256 lastProofIndex = _proofs[offerId].dailyProofCount;
+        //TODO: get latest proof array index
 
-        // check how many blocks has passed
-        uint256 blocksPassed = block.number - _proofs[offerId].dailyProofIndex[lastProofIndex];
+        //TODO: check how many blocks has passed since last proof
 
-        // save the number of days passed based without sending proofs (if any, solidity always rounds down)
-        _proofs[offerId].missedDays += blocksPassed / dailyBlocks;    
+        //TODO: save the number of days passed based without sending proofs (if any, solidity always rounds down)   
         
         // add today's proof, current block number and increment proof count
         _proofs[offerId].dailyProofIndex.push(block.number);
@@ -236,11 +253,6 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
     // get the block numbers of all proofs sent for a specific offer
     function getProofBlockNumbers(uint256 offerId) public view returns(uint256[] memory) {
         return _proofs[offerId].dailyProofIndex;
-    }
-
-    function setDailyBlocks(uint256 _dailyBlocks) public onlyGovernor {
-        require(_dailyBlocks > 0, "MUST BE POSITIVE");
-        dailyBlocks = _dailyBlocks;
     }
  
     /**
@@ -353,6 +365,12 @@ contract Escrow is ChainlinkClient, ConfirmedOwner, Context, AccessControlled
             );
         
         _transactions[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
+    }
+
+    /* ========== GOV ONLY ========== */
+    function setGovernor(address _governor) internal {
+        governor = _governor;
+        emit AuthorityUpdated(governor);
     }
 
 }
