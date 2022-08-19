@@ -50,6 +50,9 @@ npx hardhat typechain
 
 # Clean artifacts (doesn't need to be versioned):
 npx hardhat clean
+
+# Let's fork mainnet
+anvil --fork-url https://mainnet.infura.io/v3/$INFURA_KEY
 ```
 
 ### Notes for `localhost`

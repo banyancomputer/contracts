@@ -106,3 +106,14 @@ dist
 .tern-port
 
 types
+
+out
+
+coverage.json
+
+artifacts/
+
+coverage/
+
+coverage.json
+.env

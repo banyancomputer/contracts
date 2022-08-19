@@ -25,15 +25,6 @@ contract Treasury is Context, AccessControlled {
         RESERVESPENDER
     }
 
-    enum TokenType   { 
-        NON, 
-        ERC20, 
-        ERC1155, 
-        ERC721, 
-        NATIVE 
-    }
-
-
     /* ========== STATE VARIABLES ========== */
 
     string internal notApproved = "Treasury: not approved";
@@ -47,7 +38,6 @@ contract Treasury is Context, AccessControlled {
 
     // Treasury balance
     mapping(address => uint256) public erc20Treasury; // tokenAddress => feePot
-    mapping(address => mapping(uint256 => uint256)) public erc1155Treasury; // tokenAddress => tokenId => feePot
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -66,7 +56,7 @@ contract Treasury is Context, AccessControlled {
     function deposit(
         uint256 _amount,
         address _token,        
-        address _sender // remove and start using tx.origin
+        address _sender
     ) external {        
         IERC20(_token).transferFrom(_sender, address(this), _amount);
         emit DepositERC20(_token, _amount);
@@ -77,7 +67,7 @@ contract Treasury is Context, AccessControlled {
     }
 
     /**
-     * @notice allow approved address to withdraw from reserves 
+     * @notice allow approved address to withdraw from reserves ||||| TODO: wait for payment approval, @audit-issue ATM reservespender can withdraw any arbitrary amount. Need to check in on vault withdrawal.
      * @param _token address
      * @param _creator address
      * @param _creatorCounterpart uint256
@@ -119,12 +109,12 @@ contract Treasury is Context, AccessControlled {
         erc20Treasury[_token] += getFee(_amout);
     }
 
-    function getFee(uint256 _amout) public view returns (uint256) {
-        return (_amout * fee) / feeDivisor;
+    function getFee(uint256 _amount) public view returns (uint256) {
+        return (_amount * fee) / feeDivisor;
     }
 
     function setFee(uint256 _fee) public onlyGovernor {
-        require(_fee < 10000); // _fee must be less than 100%
+        require(_fee < 10000, "_fee must be less than 100%");
         fee = _fee;
     }
 
