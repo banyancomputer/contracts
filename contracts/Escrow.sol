@@ -76,23 +76,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @notice Deploy the contract with a specified address for the Authority, the LINK and Oracle contract addresses
     * @dev Sets the storage for the specified addresses
     * @param _governor Address of the Govenor contract
-    * @param _vault Address of the Treasury contract
     * @param _link The address of the LINK token contract
     */
 
-    constructor(address _link, address _governor, address _vault) {
-        _initialize(msg.sender, _link, _governor, _vault);
-        vault = _vault;
-    }
-
-    function _initialize(address _authority, address _link, address _governor, address _treasury) internal initializer
+    function _initialize(address _authority, address _link, address _governor, address _treasury, address _vault) internal initializer
     {
         require(_authority != address(0), "0 Address Revert");
         
         __Ownable_init();
 
-
         governor = _governor;
+        vault = _vault;
         treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
