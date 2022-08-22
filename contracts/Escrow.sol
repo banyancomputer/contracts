@@ -77,6 +77,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @dev Sets the storage for the specified addresses
     * @param _governor Address of the Govenor contract
     * @param _link The address of the LINK token contract
+    * @param _vault The address of the Banyan vault contract
+    * @param _vault The address of the treasury contract for interactions between parties
     */
 
     function _initialize(address _authority, address _link, address _governor, address _treasury, address _vault) internal initializer
