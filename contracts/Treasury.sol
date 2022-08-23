@@ -2,9 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
-
-import "./types/AccessControlled.sol";
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -13,7 +10,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 import "hardhat/console.sol";
 
-contract Treasury is Context, AccessControlled {
+contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgradeable {
 
     /* ========== EVENTS ========== */
 
@@ -41,15 +38,32 @@ contract Treasury is Context, AccessControlled {
     uint256 public fee = 10; // 1 == 0.01%
     uint256 public feeDivisor = 10000;
 
+    // addresses
+    address public governor;
+
     // Treasury balance
     mapping(address => uint256) public erc20Treasury; // tokenAddress => feePot
 
-    /* ========== CONSTRUCTOR ========== */
+    error UNAUTHORIZED();
 
-    constructor(
-        address _authority
-    ) AccessControlled(IAuthority(_authority)) {
-        // TBD
+    /* ========== INITIALIZATION ========== */
+
+    function _initialize(address _authority, address _governor) internal initializer
+    {
+        require(_authority != address(0), "0 Address Revert");
+        
+        __ReentrancyGuard_init();
+        __Ownable_init();
+        transferOwnership(_governor);
+        
+        governor = _governor;
+    }
+
+    /* ========== Modifiers ========== */
+
+    modifier onlyGovernor {
+	    if (msg.sender != governor) revert UNAUTHORIZED();
+	_;
     }
 
     /**
@@ -102,7 +116,7 @@ contract Treasury is Context, AccessControlled {
         STATUS _status,
         address _address,
         bool _permission
-    ) public onlyGovernor {
+    ) public {
         permissions[_status][_address] = _permission;
     }
 

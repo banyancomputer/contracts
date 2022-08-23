@@ -85,8 +85,10 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     {
         require(_authority != address(0), "0 Address Revert");
         
+        __ReentrancyGuard_init();
         __Ownable_init();
-
+        transferOwnership(_governor);
+        
         governor = _governor;
         vault = _vault;
         treasury = ITreasury(_treasury);
