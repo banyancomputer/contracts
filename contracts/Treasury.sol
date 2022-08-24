@@ -48,7 +48,7 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
 
     /* ========== INITIALIZATION ========== */
 
-    function _initialize(address _authority, address _governor) internal initializer
+    function _initialize(address _authority, address _governor) external initializer
     {
         require(_authority != address(0), "0 Address Revert");
         

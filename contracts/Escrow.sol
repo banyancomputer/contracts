@@ -81,14 +81,14 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @param _vault The address of the treasury contract for interactions between parties
     */
 
-    function _initialize(address _authority, address _link, address _governor, address _treasury, address _vault) internal initializer
+    function _initialize(address _link, address _governor, address _treasury, address _vault) external initializer
     {
-        require(_authority != address(0), "0 Address Revert");
+        require(_governor != address(0), "0 Address Revert");
         
         __ReentrancyGuard_init();
         __Ownable_init();
         transferOwnership(_governor);
-        
+
         governor = _governor;
         vault = _vault;
         treasury = ITreasury(_treasury);
