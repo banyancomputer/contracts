@@ -22,6 +22,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
     event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
+    event RequestVerification(bytes32 indexed requestId, uint256 verification);
 
     ITreasury public treasury;
     address public vault;
@@ -81,7 +82,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @param _vault The address of the treasury contract for interactions between parties
     */
 
-    function _initialize(address _link, address _governor, address _treasury, address _vault) external initializer
+    function _initialize(address _link, address _governor, address _treasury, address _vault, address _oracle) external initializer
     {
         require(_governor != address(0), "0 Address Revert");
         
@@ -94,6 +95,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
+        setChainlinkOracle(_oracle);
 
         _openOfferAcc = 0;
         _totalOfferCompletedAcc = 0;
