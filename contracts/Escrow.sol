@@ -16,23 +16,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 {
     using Chainlink for Chainlink.Request;
 
-    event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
-    event FinishOffer(address indexed executor, uint256 offerId);
-    event OfferFinalized(uint256 offerId);
-    event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
-    event OfferCancelled(address indexed requester, uint256 offerId);
-    event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
-    event RequestVerification(bytes32 indexed requestId, uint256 verification);
-
     ITreasury public treasury;
     address public vault;
     address public override governor;
 
     uint256 private _offerId;
-    mapping(uint256 => Offer) internal _transactions;
-    mapping(uint256 => Proof) internal _proofs;
+    uint256 private fee;
+    mapping(uint256 => Deal) public _deals;
+    mapping (uint256 => mapping (uint256 => uint256)) public _proofblocks;
     mapping(address => uint256[]) internal _openOffers;
     mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-100000; 100000 = 100%)
+    mapping(uint256 => ResponseData) public responses;
 
     uint256 private _openOfferAcc;
     uint256 private _totalOfferCompletedAcc;
@@ -41,8 +35,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     // Oracle Configuration
     address private oracle;
     bytes32 private jobId;
-    uint256 private payment;
-    string[] private paths;
 
     enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED, OFFER_WITHDRAWN }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
@@ -50,25 +42,41 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     struct OfferCounterpart {
         bytes32 commitment;
         uint256 amount;
-        UserStatus offerorStatus;
+        address partyAddress;
+        UserStatus partyStatus;
     }
 
-    struct Proof {
-        uint256[] dailyProofIndex; // array of block.number
-        uint256 dailyProofCount; // hack to avoid counting the proofs every time
-        uint256 missedDays; // number of days without a proof
-        uint256 startingBlock; // block.number at offer start
-        uint256 fileCID; // CID of the file containing the proof
-    }
-    struct Offer {
-        address token;
-        address creator;
+    struct Deal {
+        uint256 offerId;
+        uint256 dealStartBlock;
+        uint256 dealLengthInBlocks;
+        uint256 proofFrequencyInBlocks;
+        uint256 price;
+        uint256 collateral;
+        address erc20TokenDenomination;
+        string ipfsFileCID; 
+        uint256 fileSize;
+        string blake3Checksum;
         OfferCounterpart creatorCounterpart;
-        address executor;
         OfferCounterpart executorCounterpart;
-        uint256 id;
         OfferStatus offerStatus;
     }
+
+    struct ResponseData {
+        uint256 responseOfferID;
+        uint256 successCount;
+        uint256 numWindows;
+        uint256 status;
+        string result;
+    }
+
+    event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
+    event FinishOffer(address indexed executor, uint256 offerId);
+    event OfferFinalized(uint256 offerId);
+    event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
+    event OfferCancelled(address indexed requester, uint256 offerId);
+    event RequestVerification(bytes32 indexed requestId, uint256 offerId);
+    event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
 
     error UNAUTHORIZED();
     error AUTHORITY_INITIALIZED();
@@ -101,6 +109,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _totalOfferCompletedAcc = 0;
         _totalOfferClaimAcc = 0;
         _offerId = 0;
+        fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
 
     /* ========== "MODIFIERS" ========== */
@@ -112,59 +121,56 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     modifier onlyExecutor(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
-        Offer memory offer = _transactions[offerId];
-        require(offer.executor == msg.sender, "Only executor");
+        Deal memory offer = _deals[offerId];
+        require(offer.executorCounterpart.partyAddress == msg.sender, "Only executor");
         _;
     }
         
     modifier onlyCreator(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
-        Offer memory offer = _transactions[offerId];
-        require(offer.creator == msg.sender, "Only creator");
+        Deal memory offer = _deals[offerId];
+        require(offer.creatorCounterpart.partyAddress == msg.sender, "Only creator");
         _;
     }
 
     modifier onlyParticipant(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
-        Offer memory offer = _transactions[offerId];
-        require(offer.creator == msg.sender || offer.executor == msg.sender, "Only creator or executor");
+        Deal memory offer = _deals[offerId];
+        require(offer.creatorCounterpart.partyAddress == msg.sender || offer.executorCounterpart.partyAddress == msg.sender, "Only creator or executor");
         _;
     }
 
-    // TODO: refactor using eip 4626
-     function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, uint256 cid) public payable returns(uint256)
+     function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, string memory cid) public payable returns(uint256)
     {
         require(executerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
 
         _offerId++;
-        _transactions[_offerId].id = _offerId;
-        _transactions[_offerId].token = token;
-        _transactions[_offerId].creator = msg.sender;
-        _transactions[_offerId].executor = executerAddress;
+        _deals[_offerId].offerId = _offerId;
+        _deals[_offerId].erc20TokenDenomination = token;
+        _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
+        _deals[_offerId].executorCounterpart.partyAddress = executerAddress;
     
         verifyOfferIntegrity(token, creatorAmount);
         verifyERC20(msg.sender, token, creatorAmount);
 
         // TODO: upgrade readability and maybe gas optimization
-        _transactions[_offerId].creatorCounterpart.amount  = creatorAmount;
-        _transactions[_offerId].creatorCounterpart.offerorStatus = UserStatus.OPEN;
+        _deals[_offerId].creatorCounterpart.amount  = creatorAmount;
+        _deals[_offerId].creatorCounterpart.partyStatus = UserStatus.OPEN;
         
         verifyOfferIntegrity(token, executorAmount);
         verifyERC20(executerAddress, token, executorAmount);
            
-        _transactions[_offerId].executorCounterpart.amount  = creatorAmount;
-        _transactions[_offerId].executorCounterpart.offerorStatus = UserStatus.OPEN;
+        _deals[_offerId].executorCounterpart.amount  = creatorAmount;
+        _deals[_offerId].executorCounterpart.partyStatus = UserStatus.OPEN;
         
-        _transactions[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
+        _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
         _openOffers[executerAddress].push(_offerId);
 
         // initialize proof with current block number
-        _proofs[_offerId].startingBlock = block.number;
-        _proofs[_offerId].dailyProofIndex.push(block.number); // TODO: get rid of costly push (maybe use struct?)
-        _proofs[_offerId].fileCID = cid;
-        _proofs[_offerId].dailyProofCount = 0;
-        _proofs[_offerId].missedDays = 0;
+        _deals[_offerId].dealStartBlock = block.number;
+        _deals[_offerId].ipfsFileCID = cid;
+        _deals[_offerId].proofFrequencyInBlocks = 0;
 
         // Start moving funds to Treasury
         treasury.deposit(creatorAmount, token, msg.sender);
@@ -177,17 +183,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     // TODO: add chargeback and offer dispute logic
     function cancelOffer(uint256 offerId) public  returns (bool)
     {
-        Offer storage store = _transactions[offerId];
+        Deal storage store = _deals[offerId];
         require(store.offerStatus == OfferStatus.OFFER_CREATED, "OFFER_STATUS ISNT CREATED");
-        require(store.executor == msg.sender || store.creator == msg.sender , "UNAUTHORIZED");
-        _transactions[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
+        require(store.executorCounterpart.partyAddress == msg.sender || store.creatorCounterpart.partyAddress == msg.sender , "UNAUTHORIZED");
+        _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
     function getOffer(uint256 offerId) public view returns (address, address, uint8)
     {
-        Offer storage store = _transactions[offerId];
-        return (store.creator, store.executor, uint8(store.offerStatus));
+        Deal storage store = _deals[offerId];
+        return (store.creatorCounterpart.partyAddress, store.executorCounterpart.partyAddress, uint8(store.offerStatus));
     }
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
@@ -232,27 +238,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     // function that saves time of proof sending
-    function saveProof(uint256 offerId, bytes memory _proof) public onlyExecutor(offerId) {
+    function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetWindow) public onlyExecutor(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
-        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
+        require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
 
-        //TODO: get latest proof array index
-
-        //TODO: check how many blocks has passed since last proof
-
-        //TODO: save the number of days passed based without sending proofs (if any, solidity always rounds down)   
-        
-        // add today's proof, current block number and increment proof count
-        _proofs[offerId].dailyProofIndex.push(block.number);
-        _proofs[offerId].dailyProofCount++;
-
-        // using logs to save storage space costs - read it using ethers.js' getLogs()
+        _proofblocks[offerId][targetWindow] = block.number;
         emit ProofAdded(offerId, block.number, _proof);
     }
  
     // get the block numbers of all proofs sent for a specific offer
-    function getProofBlockNumbers(uint256 offerId) public view returns(uint256[] memory) {
-        return _proofs[offerId].dailyProofIndex;
+    function getProofBlockNumbers(uint256 offerId) public view returns(uint256) {
+        return _deals[offerId].dealLengthInBlocks;
     }
  
     /**
@@ -268,36 +264,25 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @notice Creates a request to the specified Oracle contract address
     * @dev This function ignores the stored Oracle contract address and
     * will instead send the request to the address specified
-    * @param _oracle The Oracle contract address to send the request to
-    * @param _jobId The bytes32 JobID to be executed
-    * @param _payment The amount of LINK to be paid for the request
-    * @param _paths The dot-delimited paths to parse the response
     */
-    function createRequestTo(address _oracle, bytes32 _jobId, uint256 _payment, string[] memory _paths) internal onlyGovernor returns (bytes32 requestId) {
-        Chainlink.Request memory req = buildChainlinkRequest(_jobId, address(this), this.fulfill.selector);
-        req.add("path_param1", _paths[0]);
-        req.add("path_param2", _paths[1]);
-        req.add("path_param3", _paths[2]);
-        requestId = sendChainlinkRequestTo(_oracle, req, _payment);
+
+    function requestVerification(string memory _jobId, uint256 _blocknum, string memory _offerid) internal returns (bytes32 requestId) {
+        Chainlink.Request memory req = buildChainlinkRequest(stringToBytes32(_jobId), address(this), this.fulfill.selector);
+        req.addUint("block_num", _blocknum); // proof blocknum
+        req.add("offer_id", _offerid);
+        return sendChainlinkRequest(req, fee);
     }
 
     /**
     * @notice The fulfill method from requests created by this contract
     * @dev The recordChainlinkFulfillment protects this function from being called
     * by anyone other than the oracle address that the request was sent to
-    * @param _requestId The ID that was generated for the request
-    * @param _param1 The answer provided by the oracle - EXAMPLE: offerId
-    * @param _param2 The answer provided by the oracle - EXAMPLE: hash computation outcome
-    * @param _param3 The answer provided by the oracle
-    */
-    function fulfill(bytes32 _requestId, uint256 _param1, uint256 _param2, uint256 _param3) public recordChainlinkFulfillment(_requestId) {
-        // TODO: check if _data contains valid proof of work completion
-        uint256 offerId = _param1; // EXAMPLE: the offerId is the first parameter in the response
-
-        if (_param2 > 0 && _param3 > 0) { // just a dummy check to make sure the proof is valid
-            finalize(offerId);
-            prepWithdrawal(offerId, _param2);
-        }
+    * @param requestId The ID that was generated for the request
+    */    
+    
+    function fulfill(bytes32 requestId, uint256 offerID, uint256 successCount, uint256 numWindows, uint16 status, string calldata result) public recordChainlinkFulfillment(requestId) {
+        emit RequestVerification(requestId, offerID);
+        responses[offerID] = ResponseData(offerID, successCount, numWindows, status, result);
     }
 
     /**
@@ -320,57 +305,95 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
     }
 
-    /**
-    * @notice Oracle parameters for the request to be sent to the Oracle contract
-    * @param _oracle The Oracle contract address to send the request to
-    * @param _jobId The bytes32 JobID to be executed
-    * @param _payment The amount of LINK to be paid for the request
-    * @param _paths The parameters to be sent to the Oracle
-    */
-    function oracleSetUp(address _oracle, bytes32 _jobId, uint256 _payment, string[] memory _paths) public onlyGovernor {
-        oracle = _oracle;
-        jobId = _jobId;
-        payment = _payment;
-        paths = _paths; // needs to be dinamically obtained per offer
-    }
-
-    function oracleRequest() public onlyGovernor returns (bytes32 requestId) {
-        return createRequestTo(oracle, jobId, payment, paths);
+    function oracleRequest(string memory _jobId, string memory offerid) public onlyGovernor returns (bytes32 requestId) {
+        return requestVerification(_jobId, block.number, offerid);
     }
 
     function finalize(uint256 offerId) internal {
-        _transactions[offerId].offerStatus = OfferStatus.OFFER_COMPLETED;
+        _deals[offerId].offerStatus = OfferStatus.OFFER_COMPLETED;
         emit OfferFinalized(offerId);
     }
 
     function prepWithdrawal(uint256 offerId, uint256 successfulProofs) internal {
         // TODO: include here any other logic to determine the amount of payment to be withdrawn
-        _proofSuccessRate[offerId] = (successfulProofs / _proofs[offerId].dailyProofCount) * 100;
+        _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks) * 100;
     }
 
     function withdraw(uint256 offerId) public onlyParticipant(offerId) {
-        require(_transactions[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
+        require(_deals[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
         require(_proofSuccessRate[offerId] > 0, "ERROR: NO_SUCCESSFUL_PROOFS");
         require(_proofSuccessRate[offerId] < 100, "ERROR: ALL_PROOFS_SUCCESSFUL"); //TODO: Refactor this.
 
-        uint256 cut = ((_proofSuccessRate[offerId] * _transactions[offerId].creatorCounterpart.amount) / 100 );
+        uint256 cut = ((_proofSuccessRate[offerId] * _deals[offerId].creatorCounterpart.amount) / 100 );
         
         treasury.withdraw(
-            _transactions[offerId].token,
-            _transactions[offerId].creator, 
-            _transactions[offerId].creatorCounterpart.amount,
-            _transactions[offerId].executor, 
-            _transactions[offerId].executorCounterpart.amount,
+            _deals[offerId].erc20TokenDenomination,
+            _deals[offerId].creatorCounterpart.partyAddress, 
+            _deals[offerId].creatorCounterpart.amount,
+            _deals[offerId].executorCounterpart.partyAddress, 
+            _deals[offerId].executorCounterpart.amount,
             cut
             );
         
-        _transactions[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
+        _deals[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
+    }
+
+    // @audit-issue move this to some sort of Math.sol or something.
+    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            // solhint-disable-line no-inline-assembly
+            result := mload(add(source, 32))
+        }
     }
 
     /* ========== GOV ONLY ========== */
     function setGovernor(address _governor) internal {
         governor = _governor;
         emit AuthorityUpdated(governor);
+    }
+
+    /*****************************************************************/
+
+                        /* VIEW FUNCTIONS */
+
+    /*****************************************************************/
+
+    function getDeal(uint256 offerID) public view returns (Deal memory) {
+        return _deals[offerID];
+    }
+    function getDealStartBlock(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].dealStartBlock;
+    }
+    function getDealLengthInBlocks(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].dealLengthInBlocks;
+    }
+    function getProofFrequencyInBlocks(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].proofFrequencyInBlocks;
+    }
+    function getPrice(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].price;
+    }
+    function getCollateral(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].collateral;
+    }
+    function getErc20TokenDenomination(uint256 offerID) public view returns (address) {
+        return _deals[offerID].erc20TokenDenomination;
+    }
+    function getIpfsFileCid(uint256 offerID) public view returns (string memory) {
+        return _deals[offerID].ipfsFileCID;
+    }
+    function getFileSize(uint256 offerID) public view returns (uint256) {
+        return _deals[offerID].fileSize;
+    }
+    function getBlake3Checksum(uint256 offerID) public view returns (string memory) {
+        return _deals[offerID].blake3Checksum;
+    }
+    function getProofBlock(uint256 offerID, uint256 windowNum) public view returns (uint256) {
+        return _proofblocks[offerID][windowNum]; 
     }
 
 }
