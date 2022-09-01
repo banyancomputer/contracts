@@ -243,7 +243,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
 
         _proofblocks[offerId][targetWindow] = block.number;
-        emit ProofAdded(offerId, block.number, _proof);
+        emit ProofAdded(offerId, _proofblocks[offerId][targetWindow], _proof);
     }
  
     // get the block numbers of all proofs sent for a specific offer
@@ -266,9 +266,10 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * will instead send the request to the address specified
     */
 
-    function requestVerification(string memory _jobId, uint256 _blocknum, string memory _offerid) internal returns (bytes32 requestId) {
+    function requestVerification(string memory _jobId, string memory _offerid) public returns (bytes32 requestId) {
+        require(msg.sender == oracle, "Only Oracle can request verification");
         Chainlink.Request memory req = buildChainlinkRequest(stringToBytes32(_jobId), address(this), this.fulfill.selector);
-        req.addUint("block_num", _blocknum); // proof blocknum
+        req.addUint("block_num", block.number); // proof blocknum
         req.add("offer_id", _offerid);
         return sendChainlinkRequest(req, fee);
     }
@@ -276,12 +277,16 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     /**
     * @notice The fulfill method from requests created by this contract
     * @dev The recordChainlinkFulfillment protects this function from being called
-    * by anyone other than the oracle address that the request was sent to
+    * by anyone other than the oracle address that the request was sent to. Only the oracle should be calling on this function.
     * @param requestId The ID that was generated for the request
     */    
     
     function fulfill(bytes32 requestId, uint256 offerID, uint256 successCount, uint256 numWindows, uint16 status, string calldata result) public recordChainlinkFulfillment(requestId) {
         emit RequestVerification(requestId, offerID);
+        prepWithdrawal(offerID, successCount);
+        require(_proofSuccessRate[offerID] > 80, "Unsuccessful redemption"); // check to make sure the proofs submitted over time reaches limit
+        finalize(offerID);
+        withdraw(offerID);
         responses[offerID] = ResponseData(offerID, successCount, numWindows, status, result);
     }
 
@@ -305,24 +310,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
     }
 
-    function oracleRequest(string memory _jobId, string memory offerid) public onlyGovernor returns (bytes32 requestId) {
-        return requestVerification(_jobId, block.number, offerid);
-    }
-
     function finalize(uint256 offerId) internal {
         _deals[offerId].offerStatus = OfferStatus.OFFER_COMPLETED;
         emit OfferFinalized(offerId);
     }
 
     function prepWithdrawal(uint256 offerId, uint256 successfulProofs) internal {
-        // TODO: include here any other logic to determine the amount of payment to be withdrawn
         _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks) * 100;
     }
 
-    function withdraw(uint256 offerId) public onlyParticipant(offerId) {
+    function withdraw(uint256 offerId) internal {
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
-        require(_proofSuccessRate[offerId] > 0, "ERROR: NO_SUCCESSFUL_PROOFS");
-        require(_proofSuccessRate[offerId] < 100, "ERROR: ALL_PROOFS_SUCCESSFUL"); //TODO: Refactor this.
 
         uint256 cut = ((_proofSuccessRate[offerId] * _deals[offerId].creatorCounterpart.amount) / 100 );
         

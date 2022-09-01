@@ -1,6 +1,5 @@
-import { Authority } from "../types"; // just to redeclare this test scope
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import { ethers } from "hardhat";
 
 describe("Treasury", async () => {
 
