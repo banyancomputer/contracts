@@ -10,6 +10,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./interfaces/IEscrow.sol";
 import "./interfaces/ITreasury.sol";
 
+import { EscrowMath } from "./libraries/EscrowMath.sol";
+
 import "hardhat/console.sol";
 
 contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IEscrow
@@ -268,7 +270,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     function requestVerification(string memory _jobId, string memory _offerid) public returns (bytes32 requestId) {
         require(msg.sender == oracle, "Only Oracle can request verification");
-        Chainlink.Request memory req = buildChainlinkRequest(stringToBytes32(_jobId), address(this), this.fulfill.selector);
+        Chainlink.Request memory req = buildChainlinkRequest(EscrowMath.stringToBytes32(_jobId), address(this), this.fulfill.selector);
         req.addUint("block_num", block.number); // proof blocknum
         req.add("offer_id", _offerid);
         return sendChainlinkRequest(req, fee);
@@ -334,18 +336,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
             );
         
         _deals[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
-    }
-
-    // @audit-issue move this to some sort of Math.sol or something.
-    function stringToBytes32(string memory source) private pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-        assembly {
-            // solhint-disable-line no-inline-assembly
-            result := mload(add(source, 32))
-        }
     }
 
     /* ========== GOV ONLY ========== */
