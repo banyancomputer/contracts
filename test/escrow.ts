@@ -1,8 +1,7 @@
-import { Authority } from "../types"; // just to redeclare this test scope
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-import { mine, impersonateAccount, time } from "@nomicfoundation/hardhat-network-helpers";
+import { mine, impersonateAccount } from "@nomicfoundation/hardhat-network-helpers";
 const fs = require("fs");
 
 describe("Escrow", async () => {
