@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "yarn snapshot && forge test && npx hardhat test",
+    "test": "yarn snapshot && forge test",
     "snapshot": "forge clean && forge snapshot"
   },
   "repository": {

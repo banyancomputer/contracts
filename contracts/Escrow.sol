@@ -142,7 +142,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _;
     }
 
-     function startOffer(address token, uint256 creatorAmount, address  executerAddress, uint256 executorAmount, string memory cid) public payable returns(uint256)
+     function startOffer(address  executerAddress, address token, uint256 creatorAmount, uint256 executorAmount, string memory cid) public payable returns(uint256)
     {
         require(executerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
 
@@ -182,7 +182,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         return _offerId;
     }
 
-    // TODO: add chargeback and offer dispute logic
     function cancelOffer(uint256 offerId) public  returns (bool)
     {
         Deal storage store = _deals[offerId];
@@ -192,6 +191,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
+
     function getOffer(uint256 offerId) public view returns (address, address, uint8)
     {
         Deal storage store = _deals[offerId];
@@ -212,11 +212,11 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         return true;
     }
 
-    function offerPerUser(address u) public view returns(uint256[] memory ) {
+    function offerPerUser(address u) public view returns(uint256[] memory) {
         return (_openOffers[u]);
     }
 
-    function removeOfferForUser(address u, uint256 offerId ) private returns(bool)
+    function removeOfferForUser(address u, uint256 offerId) private returns(bool)
     {
         uint256[] memory userOffers = _openOffers[u];
 
@@ -269,7 +269,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     */
 
     function requestVerification(string memory _jobId, string memory _offerid) public returns (bytes32 requestId) {
-        require(msg.sender == oracle, "Only Oracle can request verification");
+        require(msg.sender == oracle, "Only Oracle");
         Chainlink.Request memory req = buildChainlinkRequest(EscrowMath.stringToBytes32(_jobId), address(this), this.fulfill.selector);
         req.addUint("block_num", block.number); // proof blocknum
         req.add("offer_id", _offerid);
