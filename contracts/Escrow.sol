@@ -38,7 +38,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     address private oracle;
     bytes32 private jobId;
 
-    enum OfferStatus { NON, OFFER_CREATED, OFFER_COMPLETED, OFFER_CANCELLED, OFFER_WITHDRAWN }
+    enum OfferStatus { NON, OFFER_CREATED, OFFER_ACCEPTED, OFFER_ACTIVE, OFFER_COMPLETED, OFFER_TIMEDOUT, OFFER_CANCELLED, OFFER_WITHDRAWN }
     enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
 
     struct OfferCounterpart {
@@ -142,27 +142,33 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _;
     }
 
-     function startOffer(address  executerAddress, address token, uint256 creatorAmount, uint256 executorAmount, string memory cid) public payable returns(uint256)
+     function startOffer(address executerAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
     {
         require(executerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
 
         _offerId++;
         _deals[_offerId].offerId = _offerId;
+        _deals[_offerId].dealLengthInBlocks = dealLength;
+        _deals[_offerId].proofFrequencyInBlocks = proofFrequency;
+        _deals[_offerId].price = bounty;
+        _deals[_offerId].collateral = collateral;
         _deals[_offerId].erc20TokenDenomination = token;
+        _deals[_offerId].fileSize = fileSize;
+        _deals[_offerId].ipfsFileCID = cid;
+        _deals[_offerId].blake3Checksum = blake3;
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
         _deals[_offerId].executorCounterpart.partyAddress = executerAddress;
     
-        verifyOfferIntegrity(token, creatorAmount);
-        verifyERC20(msg.sender, token, creatorAmount);
+        verifyOfferIntegrity(token, bounty);
+        verifyERC20(msg.sender, token, bounty);
 
-        // TODO: upgrade readability and maybe gas optimization
-        _deals[_offerId].creatorCounterpart.amount  = creatorAmount;
+        _deals[_offerId].creatorCounterpart.amount  = bounty;
         _deals[_offerId].creatorCounterpart.partyStatus = UserStatus.OPEN;
         
-        verifyOfferIntegrity(token, executorAmount);
-        verifyERC20(executerAddress, token, executorAmount);
+        verifyOfferIntegrity(token, collateral);
+        verifyERC20(executerAddress, token, collateral);
            
-        _deals[_offerId].executorCounterpart.amount  = creatorAmount;
+        _deals[_offerId].executorCounterpart.amount  = collateral;
         _deals[_offerId].executorCounterpart.partyStatus = UserStatus.OPEN;
         
         _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
@@ -175,8 +181,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _deals[_offerId].proofFrequencyInBlocks = 0;
 
         // Start moving funds to Treasury
-        treasury.deposit(creatorAmount, token, msg.sender);
-        treasury.deposit(executorAmount, token, executerAddress);
+        treasury.deposit(collateral, token, msg.sender);
+        treasury.deposit(bounty, token, executerAddress);
 
         emit NewOffer(msg.sender, executerAddress, _offerId );
         return _offerId;
@@ -355,6 +361,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
     function getDealStartBlock(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealStartBlock;
+    }
+    function getDealStatus(uint256 _dealId) public view returns (uint8) {
+        return uint8(_deals[_dealId].offerStatus);
     }
     function getDealLengthInBlocks(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealLengthInBlocks;
