@@ -22,12 +22,13 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     address public vault;
     address public override governor;
 
-    uint256 private _offerId;
     uint256 private fee;
+
+    uint256 private _offerId;
     mapping(uint256 => Deal) public _deals;
     mapping (uint256 => mapping (uint256 => uint256)) public _proofblocks;
     mapping(address => uint256[]) internal _openOffers;
-    mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-100000; 100000 = 100%)
+    mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-10000; 10000 = 100%)
     mapping(uint256 => ResponseData) public responses;
 
     uint256 private _openOfferAcc;
@@ -38,14 +39,12 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     address private oracle;
     bytes32 private jobId;
 
-    enum OfferStatus { NON, OFFER_CREATED, OFFER_ACCEPTED, OFFER_ACTIVE, OFFER_COMPLETED, OFFER_TIMEDOUT, OFFER_CANCELLED, OFFER_WITHDRAWN }
-    enum UserStatus  { NON, OPEN, DEPOSIT, CLAIM }
+    enum OfferStatus { NON, OFFER_CREATED, OFFER_ACCEPTED, OFFER_ACTIVE, OFFER_COMPLETED, OFFER_FINALIZED, OFFER_TIMEDOUT, OFFER_CANCELLED }
 
     struct OfferCounterpart {
         bytes32 commitment;
         uint256 amount;
         address partyAddress;
-        UserStatus partyStatus;
     }
 
     struct Deal {
@@ -73,6 +72,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
+    event OfferJoined(uint256 offerId, address indexed executor);
     event FinishOffer(address indexed executor, uint256 offerId);
     event OfferFinalized(uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
@@ -114,7 +114,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
 
-    /* ========== "MODIFIERS" ========== */
+    /* ========== MODIFIERS ========== */
 
     modifier onlyGovernor {
 	    if (msg.sender != governor) revert UNAUTHORIZED();
@@ -142,9 +142,11 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _;
     }
 
-     function startOffer(address executerAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
+    /* ========== Functionalities ========== */
+
+     function startOffer(address executorAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
     {
-        require(executerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
+        require(executorAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
 
         _offerId++;
         _deals[_offerId].offerId = _offerId;
@@ -157,38 +159,44 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _deals[_offerId].ipfsFileCID = cid;
         _deals[_offerId].blake3Checksum = blake3;
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
-        _deals[_offerId].executorCounterpart.partyAddress = executerAddress;
+        _deals[_offerId].executorCounterpart.partyAddress = executorAddress;
     
         verifyOfferIntegrity(token, bounty);
         verifyERC20(msg.sender, token, bounty);
 
         _deals[_offerId].creatorCounterpart.amount  = bounty;
-        _deals[_offerId].creatorCounterpart.partyStatus = UserStatus.OPEN;
-        
-        verifyOfferIntegrity(token, collateral);
-        verifyERC20(executerAddress, token, collateral);
            
         _deals[_offerId].executorCounterpart.amount  = collateral;
-        _deals[_offerId].executorCounterpart.partyStatus = UserStatus.OPEN;
         
         _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
-        _openOffers[executerAddress].push(_offerId);
+        _openOffers[executorAddress].push(_offerId);
 
-        // initialize proof with current block number
-        _deals[_offerId].dealStartBlock = block.number;
-        _deals[_offerId].ipfsFileCID = cid;
-        _deals[_offerId].proofFrequencyInBlocks = 0;
-
-        // Start moving funds to Treasury
+        // Contract creator moves funds to Treasury
+        // TOOD: Make sure to add timeout logic to ensure funds are not stuck
         treasury.deposit(collateral, token, msg.sender);
-        treasury.deposit(bounty, token, executerAddress);
 
-        emit NewOffer(msg.sender, executerAddress, _offerId );
+        emit NewOffer(msg.sender, executorAddress, _offerId );
         return _offerId;
     }
 
-    function cancelOffer(uint256 offerId) public  returns (bool)
+    function joinOffer(uint256 offerID) public {
+        require(offerID != 0, "Invalid offer id");
+        require(_deals[offerID].executorCounterpart.partyAddress == msg.sender, "Designated executor only");
+
+        verifyERC20(msg.sender, _deals[_offerId].erc20TokenDenomination, _deals[_offerId].price);
+
+        _deals[_offerId].offerStatus = OfferStatus.OFFER_ACCEPTED;
+
+        // initialize proof with current block number
+        _deals[_offerId].dealStartBlock = block.number;
+
+        treasury.deposit(_deals[_offerId].price, _deals[_offerId].erc20TokenDenomination, msg.sender);
+
+        emit OfferJoined(offerID, msg.sender);
+    }
+
+    function cancelOffer(uint256 offerId) public returns (bool)
     {
         Deal storage store = _deals[offerId];
         require(store.offerStatus == OfferStatus.OFFER_CREATED, "OFFER_STATUS ISNT CREATED");
@@ -341,7 +349,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
             cut
             );
         
-        _deals[offerId].offerStatus = OfferStatus.OFFER_WITHDRAWN;
+        _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
     }
 
     /* ========== GOV ONLY ========== */
