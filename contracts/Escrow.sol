@@ -41,6 +41,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     enum OfferStatus { NON, OFFER_CREATED, OFFER_ACCEPTED, OFFER_ACTIVE, OFFER_COMPLETED, OFFER_FINALIZED, OFFER_TIMEDOUT, OFFER_CANCELLED }
 
+    // Do we need this? TODO: Remove if not.
     struct OfferCounterpart {
         bytes32 commitment;
         uint256 amount;
@@ -164,7 +165,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         verifyOfferIntegrity(token, bounty);
         verifyERC20(msg.sender, token, bounty);
 
-        _deals[_offerId].creatorCounterpart.amount  = bounty;
+        _deals[_offerId].creatorCounterpart.amount = bounty;
         
         _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
@@ -202,24 +203,13 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         require(store.offerStatus == OfferStatus.OFFER_CREATED, "OFFER_STATUS ISNT CREATED");
         require(store.executorCounterpart.partyAddress == msg.sender || store.creatorCounterpart.partyAddress == msg.sender , "UNAUTHORIZED");
         _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
+        removeOfferForUser(store.executorCounterpart.partyAddress, offerId);
+        removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
-    
-     function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
-        require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
-        require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
-        return true;
-    }
-    
-    function verifyOfferIntegrity(address tokenAddress,  uint256 amount) public pure returns(bool)
-    {
-        require(tokenAddress != address(0), "INVALID TOKENADDR");
-        require(amount > 0  , "MUST BE > 0 AMT");
-        return true;
-    }
 
-    function removeOfferForUser(address user, uint256 offerId) private returns(bool)
+    function removeOfferForUser(address user, uint256 offerId) private onlyParticipant(offerId) returns(bool)
     {
         uint256[] memory userOffers = _openOffers[user];
 
@@ -247,18 +237,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         emit ProofAdded(offerId, _proofblocks[offerId][targetWindow], _proof);
     }
  
-    // get the block numbers of all proofs sent for a specific offer
-    function getProofBlockNumbers(uint256 offerId) public view returns(uint256) {
-        return _deals[offerId].dealLengthInBlocks;
+     function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
+        require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
+        require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
+        return true;
     }
- 
-    /**
-    * @notice Returns the address of the LINK token
-    * @dev This is the public implementation for chainlinkTokenAddress, which is
-    * an internal method of the ChainlinkClient contract
-    */
-    function getChainlinkToken() public view returns (address) {
-        return chainlinkTokenAddress();
+    
+    function verifyOfferIntegrity(address tokenAddress,  uint256 amount) internal pure returns(bool)
+    {
+        require(tokenAddress != address(0), "INVALID TOKENADDR");
+        require(amount > 0  , "MUST BE > 0 AMT");
+        return true;
     }
 
     /**
@@ -281,26 +270,17 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * by anyone other than the oracle address that the request was sent to. Only the oracle should be calling on this function.
     * @param requestId The ID that was generated for the request
     */    
-    
+
     function fulfill(bytes32 requestId, uint256 offerID, uint256 successCount, uint256 numWindows, uint16 status, string calldata result) public recordChainlinkFulfillment(requestId) {
         emit RequestVerification(requestId, offerID);
-        prepWithdrawal(offerID, successCount);
-        require(_proofSuccessRate[offerID] > 80, "Unsuccessful redemption"); // check to make sure the proofs submitted over time reaches limit
-        finalize(offerID);
-        withdraw(offerID);
         responses[offerID] = ResponseData(offerID, successCount, numWindows, status, result);
     }
 
-    /**
-    * @notice Call this method if no response is received within 5 minutes
-    * @param _requestId The ID that was generated for the request to cancel
-    * @param _payment The payment specified for the request to cancel
-    * @param _callbackFunctionId The bytes4 callback function ID specified for
-    * the request to cancel
-    * @param _expiration The expiration generated for the request to cancel
-    */
-    function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyGovernor {    
-        cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
+    function complete(uint256 offerID, uint256 requiredRate) public onlyParticipant(offerID) {
+        prepWithdrawal(offerID, responses[offerID].successCount);
+        require(_proofSuccessRate[offerID] > requiredRate, "Unsuccessful redemption"); // check to make sure the proofs submitted over time reaches limit
+        finalize(offerID);
+        withdraw(offerID);
     }
 
     function finalize(uint256 offerId) internal {
@@ -323,15 +303,16 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
             _deals[offerId].executorCounterpart.partyAddress, 
             _deals[offerId].executorCounterpart.amount,
             cut
-            );
+        );
 
     }
 
-    /* ========== GOV ONLY ========== */
     function setGovernor(address _governor) internal {
         governor = _governor;
         emit AuthorityUpdated(governor);
     }
+
+    /* ========== GOV ONLY ========== */
 
     /**
     * @notice Allows the owner to withdraw any LINK balance on the contract
@@ -344,6 +325,18 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     function setTreasury(address _treasury) public onlyGovernor {
         require(_treasury != address(0), "INVALID ADDRESS");
         treasury = ITreasury(_treasury);
+    }
+
+    /**
+    * @notice Call this method if no response is received within 5 minutes
+    * @param _requestId The ID that was generated for the request to cancel
+    * @param _payment The payment specified for the request to cancel
+    * @param _callbackFunctionId The bytes4 callback function ID specified for
+    * the request to cancel
+    * @param _expiration The expiration generated for the request to cancel
+    */
+    function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyGovernor {    
+        cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
     }
 
     /*****************************************************************/
@@ -398,6 +391,20 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
     function getProofBlock(uint256 offerID, uint256 windowNum) public view returns (uint256) {
         return _proofblocks[offerID][windowNum]; 
+    }
+
+    // get the block numbers of all proofs sent for a specific offer
+    function getProofBlockNumbers(uint256 offerId) public view returns(uint256) {
+        return _deals[offerId].dealLengthInBlocks;
+    }
+ 
+    /**
+    * @notice Returns the address of the LINK token
+    * @dev This is the public implementation for chainlinkTokenAddress, which is
+    * an internal method of the ChainlinkClient contract
+    */
+    function getChainlinkToken() public view returns (address) {
+        return chainlinkTokenAddress();
     }
 
 }
