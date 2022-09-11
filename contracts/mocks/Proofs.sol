@@ -86,7 +86,7 @@ contract Proofs is ChainlinkClient, ConfirmedOwner {
      */
     function withdrawLink() public onlyOwner {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
+        link.transfer(msg.sender, link.balanceOf(address(this)));
     }
 
 

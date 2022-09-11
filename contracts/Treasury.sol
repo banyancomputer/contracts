@@ -80,8 +80,6 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
         IERC20(_token).transferFrom(_sender, address(this), _amount);
         emit DepositERC20(_token, _amount);
     
-        // collecting fees from everyone
-        // TODO: should we continue collecting fee from executor's deposit? 
         collectFee(_token, _amount);
     }
 

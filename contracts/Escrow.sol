@@ -26,7 +26,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     uint256 private _offerId;
     mapping(uint256 => Deal) public _deals;
-    mapping (uint256 => mapping (uint256 => uint256)) public _proofblocks;
+    mapping(uint256 => mapping (uint256 => uint256)) public _proofblocks;
     mapping(address => uint256[]) internal _openOffers;
     mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-10000; 10000 = 100%)
     mapping(uint256 => ResponseData) public responses;
@@ -165,15 +165,12 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         verifyERC20(msg.sender, token, bounty);
 
         _deals[_offerId].creatorCounterpart.amount  = bounty;
-           
-        _deals[_offerId].executorCounterpart.amount  = collateral;
         
         _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
         _openOffers[executorAddress].push(_offerId);
 
         // Contract creator moves funds to Treasury
-        // TOOD: Make sure to add timeout logic to ensure funds are not stuck
         treasury.deposit(collateral, token, msg.sender);
 
         emit NewOffer(msg.sender, executorAddress, _offerId );
@@ -183,15 +180,18 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     function joinOffer(uint256 offerID) public {
         require(offerID != 0, "Invalid offer id");
         require(_deals[offerID].executorCounterpart.partyAddress == msg.sender, "Designated executor only");
+        require(_deals[offerID].offerStatus == OfferStatus.OFFER_CREATED, "Offer not available");
 
         verifyERC20(msg.sender, _deals[_offerId].erc20TokenDenomination, _deals[_offerId].price);
 
         _deals[_offerId].offerStatus = OfferStatus.OFFER_ACCEPTED;
 
+        _deals[_offerId].executorCounterpart.amount = _deals[_offerId].collateral;
+
         // initialize proof with current block number
         _deals[_offerId].dealStartBlock = block.number;
 
-        treasury.deposit(_deals[_offerId].price, _deals[_offerId].erc20TokenDenomination, msg.sender);
+        treasury.deposit(_deals[_offerId].collateral, _deals[_offerId].erc20TokenDenomination, msg.sender);
 
         emit OfferJoined(offerID, msg.sender);
     }
@@ -205,19 +205,12 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
-
-    function getOffer(uint256 offerId) public view returns (address, address, uint8)
-    {
-        Deal storage store = _deals[offerId];
-        return (store.creatorCounterpart.partyAddress, store.executorCounterpart.partyAddress, uint8(store.offerStatus));
-    }
     
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
         require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
         return true;
     }
-
     
     function verifyOfferIntegrity(address tokenAddress,  uint256 amount) public pure returns(bool)
     {
@@ -226,37 +219,29 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         return true;
     }
 
-    function offerPerUser(address u) public view returns(uint256[] memory) {
-        return (_openOffers[u]);
-    }
-
-    function removeOfferForUser(address u, uint256 offerId) private returns(bool)
+    function removeOfferForUser(address user, uint256 offerId) private returns(bool)
     {
-        uint256[] memory userOffers = _openOffers[u];
+        uint256[] memory userOffers = _openOffers[user];
 
-        if(_openOffers[u].length == 1){
-            _openOffers[u][0] = 0;
+        if(_openOffers[user].length == 1){
+            _openOffers[user][0] = 0;
             return true;
         }
         for (uint i = 0; i<userOffers.length-1; i++){
             if(userOffers[i] == offerId ){
-                 _openOffers[u][i] = _openOffers[u][userOffers.length-1];
-                 _openOffers[u].pop();
+                 _openOffers[user][i] = _openOffers[user][userOffers.length-1];
+                 _openOffers[user].pop();
                 return true;
             }   
         }
         return false;
     }
 
-    function setTreasury(address _treasury) public onlyGovernor {
-        require(_treasury != address(0), "INVALID ADDRESS");
-        treasury = ITreasury(_treasury);
-    }
-
     // function that saves time of proof sending
     function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetWindow) public onlyExecutor(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
+        require(block.number < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
 
         _proofblocks[offerId][targetWindow] = block.number;
         emit ProofAdded(offerId, _proofblocks[offerId][targetWindow], _proof);
@@ -307,14 +292,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     /**
-    * @notice Allows the owner to withdraw any LINK balance on the contract
-    */
-    function withdrawLink() public onlyGovernor {
-        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
-    }
-
-    /**
     * @notice Call this method if no response is received within 5 minutes
     * @param _requestId The ID that was generated for the request to cancel
     * @param _payment The payment specified for the request to cancel
@@ -336,7 +313,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     function withdraw(uint256 offerId) internal {
-        require(_deals[offerId].offerStatus == OfferStatus.OFFER_COMPLETED, "ERROR: OFFER_NOT_COMPLETED");
 
         uint256 cut = ((_proofSuccessRate[offerId] * _deals[offerId].creatorCounterpart.amount) / 100 );
         
@@ -348,8 +324,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
             _deals[offerId].executorCounterpart.amount,
             cut
             );
-        
-        _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
+
     }
 
     /* ========== GOV ONLY ========== */
@@ -358,15 +333,39 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         emit AuthorityUpdated(governor);
     }
 
+    /**
+    * @notice Allows the owner to withdraw any LINK balance on the contract
+    */
+    function withdrawLink() public onlyGovernor {
+        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
+    }
+
+    function setTreasury(address _treasury) public onlyGovernor {
+        require(_treasury != address(0), "INVALID ADDRESS");
+        treasury = ITreasury(_treasury);
+    }
+
     /*****************************************************************/
 
                         /* VIEW FUNCTIONS */
 
     /*****************************************************************/
 
+    function getOffer(uint256 offerId) public view returns (address, address, uint8)
+    {
+        Deal storage store = _deals[offerId];
+        return (store.creatorCounterpart.partyAddress, store.executorCounterpart.partyAddress, uint8(store.offerStatus));
+    }
+
     function getDeal(uint256 offerID) public view returns (Deal memory) {
         return _deals[offerID];
     }
+
+    function offerPerUser(address user) public view returns(uint256[] memory) {
+        return (_openOffers[user]);
+    }
+
     function getDealStartBlock(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealStartBlock;
     }
