@@ -184,6 +184,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         require(offerID != 0, "Invalid offer id");
         require(_deals[offerID].executorCounterpart.partyAddress == msg.sender, "Designated executor only");
         require(_deals[offerID].offerStatus == OfferStatus.OFFER_CREATED, "Offer not available");
+        require(block.number < _deals[offerID].dealStartBlock + _deals[offerID].dealLengthInBlocks && block.number > _deals[offerID].dealStartBlock, "Out of block timerange");
+
 
         verifyERC20(msg.sender, _deals[_offerId].erc20TokenDenomination, _deals[_offerId].price);
 
