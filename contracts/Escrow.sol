@@ -147,6 +147,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     /* ========== Functionalities ========== */
 
+    // @audit-issue Vulnerable to spamming
      function startOffer(address executorAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
     {
         require(executorAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
@@ -171,7 +172,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         
         _deals[_offerId].offerStatus = OfferStatus.OFFER_CREATED;
         _openOffers[msg.sender].push(_offerId);
-        _openOffers[executorAddress].push(_offerId);
 
         // Contract creator moves funds to Treasury
         treasury.deposit(collateral, token, msg.sender);
@@ -180,21 +180,21 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         return _offerId;
     }
 
-    function joinOffer(uint256 offerID) public {
+    function joinOffer(uint256 offerID) public onlyExecutor(offerID) {
         require(offerID != 0, "Invalid offer id");
-        require(_deals[offerID].executorCounterpart.partyAddress == msg.sender, "Designated executor only");
         require(_deals[offerID].offerStatus == OfferStatus.OFFER_CREATED, "Offer not available");
 
-        verifyERC20(msg.sender, _deals[_offerId].erc20TokenDenomination, _deals[_offerId].price);
+        _openOffers[_deals[offerID].executorCounterpart.partyAddress].push(offerID);
+        verifyERC20(msg.sender, _deals[offerID].erc20TokenDenomination, _deals[offerID].price);
 
-        _deals[_offerId].offerStatus = OfferStatus.OFFER_ACCEPTED;
+        _deals[offerID].offerStatus = OfferStatus.OFFER_ACCEPTED;
 
-        _deals[_offerId].executorCounterpart.amount = _deals[_offerId].collateral;
+        _deals[offerID].executorCounterpart.amount = _deals[offerID].collateral;
 
         // initialize proof with current block number
-        _deals[_offerId].dealStartBlock = block.number;
+        _deals[offerID].dealStartBlock = block.number;
 
-        treasury.deposit(_deals[_offerId].collateral, _deals[_offerId].erc20TokenDenomination, msg.sender);
+        treasury.deposit(_deals[offerID].collateral, _deals[offerID].erc20TokenDenomination, msg.sender);
 
         emit OfferJoined(offerID, msg.sender);
     }
