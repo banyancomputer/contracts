@@ -4,7 +4,6 @@ import { waitFor } from "../txHelper";
 import { CONTRACTS, CONFIGURATION } from "../constants";
 import { NomicLabsHardhatPluginError } from "hardhat/plugins";
 import {
-    Authority__factory,
     Treasury__factory,
     Escrow__factory,
 } from "../../types";
