@@ -46,6 +46,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         bytes32 commitment;
         uint256 amount;
         address partyAddress;
+        bool cancel;
     }
 
     struct Deal {
@@ -78,6 +79,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     event OfferFinalized(uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
+    event OfferRescinded(address indexed creator, uint256 offerId);
     event RequestVerification(bytes32 indexed requestId, uint256 offerId);
     event ProofAdded(uint256 indexed offerId, uint256 indexed blockNumber, bytes proof);
 
@@ -197,19 +199,43 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         emit OfferJoined(offerID, msg.sender);
     }
 
-    function cancelOffer(uint256 offerId) public returns (bool)
+    // For any case where the user wants to cancel their offer anytime before the counterparty accepts.
+    function rescindOffer(uint256 offerId) public onlyCreator(offerId) returns (bool)
     {
         Deal storage store = _deals[offerId];
-        require(store.offerStatus == OfferStatus.OFFER_CREATED, "OFFER_STATUS ISNT CREATED");
-        require(store.executorCounterpart.partyAddress == msg.sender || store.creatorCounterpart.partyAddress == msg.sender , "UNAUTHORIZED");
+        require(store.offerStatus == OfferStatus.OFFER_CREATED, "INCORRECT OFFER STATUS: !CREATED");
         _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
-        removeOfferForUser(store.executorCounterpart.partyAddress, offerId);
-        removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
+        removeOfferForUser(msg.sender, offerId);
+        withdraw(offerId, 10000);
         emit OfferCancelled(msg.sender, offerId);
         return true;
     }
 
-    function removeOfferForUser(address user, uint256 offerId) private onlyParticipant(offerId) returns(bool)
+    // TODO: add manual dispute resolution logic for cases where any party holds the other hostage.
+    function cancelOffer(uint256 offerId) public onlyParticipant(offerId) returns (bool)
+    {
+        Deal storage store = _deals[offerId];
+
+        if (store.executorCounterpart.partyAddress == msg.sender) {
+            store.executorCounterpart.cancel = true;
+        }
+        else {
+            store.creatorCounterpart.cancel = true;
+        }
+
+        if (store.executorCounterpart.cancel == true && store.creatorCounterpart.cancel == true) {
+            _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
+            removeOfferForUser(store.executorCounterpart.partyAddress, offerId);
+            removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
+            prepWithdrawal(offerId, responses[offerId].successCount);
+            withdraw(offerId, 10000);
+        }
+
+        emit OfferCancelled(msg.sender, offerId);
+        return true;
+    }
+
+    function removeOfferForUser(address user, uint256 offerId) private onlyParticipant(offerId) returns (bool)
     {
         uint256[] memory userOffers = _openOffers[user];
 
@@ -277,10 +303,11 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     function complete(uint256 offerID, uint256 requiredRate) public onlyParticipant(offerID) {
+        require(requiredRate >= 0 && requiredRate <= 10000, "Invalid rate");
         prepWithdrawal(offerID, responses[offerID].successCount);
-        require(_proofSuccessRate[offerID] > requiredRate, "Unsuccessful redemption"); // check to make sure the proofs submitted over time reaches limit
-        finalize(offerID);
-        withdraw(offerID);
+        require(block.number > _deals[offerID].dealStartBlock + _deals[offerID].dealLengthInBlocks, "Not yet deal end time"); // check to make sure the proofs submitted over time reaches limit
+        finalize(offerID) ;
+        withdraw(offerID, requiredRate);
     }
 
     function finalize(uint256 offerId) internal {
@@ -292,9 +319,13 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks) * 100;
     }
 
-    function withdraw(uint256 offerId) internal {
+    function withdraw(uint256 offerId, uint256 requiredRate) internal {
 
         uint256 cut = ((_proofSuccessRate[offerId] * _deals[offerId].creatorCounterpart.amount) / 100 );
+
+        if (_proofSuccessRate[offerId] > requiredRate) {
+            _deals[offerId].executorCounterpart.amount = 0;
+        } 
         
         treasury.withdraw(
             _deals[offerId].erc20TokenDenomination,
