@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
-import "../../contracts/Authority.sol";
 import "../../contracts/Escrow.sol";
 import "../../contracts/Treasury.sol";
 
@@ -13,8 +12,6 @@ import {stdError} from "forge-std/Test.sol";
 contract Test is BaseTest {
 
     // using Chainlink for Chainlink.Request;
-
-    Authority authority;
 
     address payable governor;
     address payable guardian;
@@ -36,7 +33,6 @@ contract Test is BaseTest {
         vault = users[3];
         replacementGovernor = users[4];
         //Instantiate contracts
-        authority = new Authority(governor, guardian, policy, vault);
 
     }
 
@@ -49,11 +45,6 @@ contract Test is BaseTest {
         
         vm.prank(guardian);
 
-        // vm.expectRevert();
-        authority.pushGovernor(replacementGovernor, true);
-
-        vm.prank(governor);
-        authority.pushGovernor(replacementGovernor, true);
     }
 
     function success() internal override {
