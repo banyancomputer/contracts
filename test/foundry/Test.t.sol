@@ -13,11 +13,11 @@ contract Test is BaseTest {
 
     // using Chainlink for Chainlink.Request;
 
-    address payable governor;
+    address payable admin;
     address payable guardian;
     address payable policy;
     address payable vault;
-    address payable replacementGovernor;
+    address payable replacementAdmin;
 
     constructor() {
         preSetup(5);
@@ -27,11 +27,11 @@ contract Test is BaseTest {
         super.setUp();
 
         //Create attacker address and two mock addresses for pools.
-        governor = users[0];
+        admin = users[0];
         guardian = users[1];
         policy = users[2];
         vault = users[3];
-        replacementGovernor = users[4];
+        replacementAdmin = users[4];
         //Instantiate contracts
 
     }
@@ -51,7 +51,7 @@ contract Test is BaseTest {
         /** SUCCESS CONDITIONS */
 
         // Check to see if the score is as modified.
-        // vm.expectEmit(governor, replacementGovernor, true);
+        // vm.expectEmit(admin, replacementAdmin, true);
     }
 
 }

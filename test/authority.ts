@@ -20,19 +20,19 @@ describe("Authority", async () => {
       expect(this.authority.address).to.not.be.null;
     }); 
   
-    it("should push a new governor - effective immediately", async function () {
-      const pushGovernor = await this.authority.pushGovernor(this.newGuyAddress, true);
-      await pushGovernor.wait();
-      expect(await this.authority.governor()).to.equal(this.newGuyAddress);
+    it("should push a new admin - effective immediately", async function () {
+      const pushAdmin = await this.authority.pushAdmin(this.newGuyAddress, true);
+      await pushAdmin.wait();
+      expect(await this.authority.admin()).to.equal(this.newGuyAddress);
     });
   
-    it("should push a new governor - effective after a delay", async function () {
-      const pushGovernor = await this.authority.pushGovernor(this.newGuyAddress, false);
-      await pushGovernor.wait();
-      expect(await this.authority.governor()).to.equal(this.ownerAddress);
-      const pullGovernor = await this.authority.connect(this.newGuy).pullGovernor();
-      await pullGovernor.wait();
-      expect(await this.authority.governor()).to.equal(this.newGuyAddress);
+    it("should push a new admin - effective after a delay", async function () {
+      const pushAdmin = await this.authority.pushAdmin(this.newGuyAddress, false);
+      await pushAdmin.wait();
+      expect(await this.authority.admin()).to.equal(this.ownerAddress);
+      const pullAdmin = await this.authority.connect(this.newGuy).pullAdmin();
+      await pullAdmin.wait();
+      expect(await this.authority.admin()).to.equal(this.newGuyAddress);
     });
   
     it("should push a new guardian - effective immediately", async function () {

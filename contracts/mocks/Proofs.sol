@@ -32,7 +32,7 @@ contract Proofs is ChainlinkClient, ConfirmedOwner {
         uint256 fileSize;
         string blake3Checksum;
         OfferCounterpart creatorCounterpart;
-        OfferCounterpart executorCounterpart;
+        OfferCounterpart providerCounterpart;
         OfferStatus offerStatus;
     }
 

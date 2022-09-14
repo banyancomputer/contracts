@@ -8,7 +8,7 @@ interface IEscrow {
 
     /* ========== VIEW ========== */
 
-    function governor() external view returns (address);
+    function admin() external view returns (address);
 
     function vault() external view returns (address);
 }

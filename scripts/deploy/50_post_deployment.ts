@@ -26,7 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     
     const authority = await Authority__factory.connect(authorityDeployment.address, signer);
     console.log("Authority address:", authority.address);
-    console.log("Authority Governor Address:", await authority.governor());
+    console.log("Authority Admin Address:", await authority.admin());
 
     const treasury = await Treasury__factory.connect(treasuryDeployment.address, signer);
     

@@ -118,4 +118,4 @@ coverage/
 coverage.json
 .env
 
-forge-cache
+forge-cache/

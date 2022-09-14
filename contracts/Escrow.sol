@@ -20,7 +20,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     ITreasury public treasury;
     address public vault;
-    address public override governor;
+    address public override admin;
 
     uint256 private fee;
 
@@ -61,7 +61,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         uint256 fileSize;
         string blake3Checksum;
         OfferCounterpart creatorCounterpart;
-        OfferCounterpart executorCounterpart;
+        OfferCounterpart providerCounterpart;
         OfferStatus offerStatus;
     }
 
@@ -73,9 +73,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         string result;
     }
 
-    event NewOffer(address indexed creator, address indexed executor, uint256 offerId);
-    event OfferJoined(uint256 offerId, address indexed executor);
-    event FinishOffer(address indexed executor, uint256 offerId);
+    event NewOffer(address indexed creator, address indexed provider, uint256 offerId);
+    event OfferJoined(uint256 offerId, address indexed provider);
+    event FinishOffer(address indexed provider, uint256 offerId);
     event OfferFinalized(uint256 offerId);
     event ClaimToken(address indexed claimOwner, OfferStatus toStatus,  uint256 offerId);
     event OfferCancelled(address indexed requester, uint256 offerId);
@@ -89,21 +89,21 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     /**
     * @notice Deploy the contract with a specified address for the Authority, the LINK and Oracle contract addresses
     * @dev Sets the storage for the specified addresses
-    * @param _governor Address of the Govenor contract
+    * @param _admin Address of the Govenor contract
     * @param _link The address of the LINK token contract
     * @param _vault The address of the Banyan vault contract
     * @param _vault The address of the treasury contract for interactions between parties
     */
 
-    function _initialize(address _link, address _governor, address _treasury, address _vault, address _oracle) external initializer
+    function _initialize(address _link, address _admin, address _treasury, address _vault, address _oracle) external initializer
     {
-        require(_governor != address(0), "0 Address Revert");
+        require(_admin != address(0), "0 Address Revert");
         
         __ReentrancyGuard_init();
         __Ownable_init();
-        transferOwnership(_governor);
+        transferOwnership(_admin);
 
-        governor = _governor;
+        admin = _admin;
         vault = _vault;
         treasury = ITreasury(_treasury);
         
@@ -119,15 +119,15 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     /* ========== MODIFIERS ========== */
 
-    modifier onlyGovernor {
-	    if (msg.sender != governor) revert UNAUTHORIZED();
+    modifier onlyAdmin {
+	    if (msg.sender != admin) revert UNAUTHORIZED();
 	_;
     }
 
-    modifier onlyExecutor(uint256 offerId) {
+    modifier onlyProvider(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
         Deal memory offer = _deals[offerId];
-        require(offer.executorCounterpart.partyAddress == msg.sender, "Only executor");
+        require(offer.providerCounterpart.partyAddress == msg.sender, "Only provider");
         _;
     }
         
@@ -141,16 +141,16 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     modifier onlyParticipant(uint256 offerId) {
         require(offerId != 0, "Invalid offer id");
         Deal memory offer = _deals[offerId];
-        require(offer.creatorCounterpart.partyAddress == msg.sender || offer.executorCounterpart.partyAddress == msg.sender, "Only creator or executor");
+        require(offer.creatorCounterpart.partyAddress == msg.sender || offer.providerCounterpart.partyAddress == msg.sender, "Only creator or provider");
         _;
     }
 
     /* ========== Functionalities ========== */
 
-    // @audit-issue Vulnerable to spamming
-     function startOffer(address executorAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
+     function startOffer(address providerAddress, uint256 dealLength, uint256 proofFrequency, uint256 bounty, uint256 collateral, address token, uint256 fileSize, string calldata cid, string calldata blake3) public payable returns(uint256)
     {
-        require(executorAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID");    
+        require(providerAddress != address(0), "EXECUTER_ADDRESS_NOT_VALID"); 
+        require(token != chainlinkTokenAddress(), "LINK_NOT_ALLOWED");   
 
         _offerId++;
         _deals[_offerId].offerId = _offerId;
@@ -163,7 +163,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _deals[_offerId].ipfsFileCID = cid;
         _deals[_offerId].blake3Checksum = blake3;
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
-        _deals[_offerId].executorCounterpart.partyAddress = executorAddress;
+        _deals[_offerId].providerCounterpart.partyAddress = providerAddress;
     
         verifyOfferIntegrity(token, bounty);
         verifyERC20(msg.sender, token, bounty);
@@ -176,20 +176,20 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         // Contract creator moves funds to Treasury
         treasury.deposit(collateral, token, msg.sender);
 
-        emit NewOffer(msg.sender, executorAddress, _offerId );
+        emit NewOffer(msg.sender, providerAddress, _offerId );
         return _offerId;
     }
 
-    function joinOffer(uint256 offerID) public onlyExecutor(offerID) {
+    function joinOffer(uint256 offerID) public onlyProvider(offerID) {
         require(offerID != 0, "Invalid offer id");
         require(_deals[offerID].offerStatus == OfferStatus.OFFER_CREATED, "Offer not available");
 
-        _openOffers[_deals[offerID].executorCounterpart.partyAddress].push(offerID);
+        _openOffers[_deals[offerID].providerCounterpart.partyAddress].push(offerID);
         verifyERC20(msg.sender, _deals[offerID].erc20TokenDenomination, _deals[offerID].price);
 
         _deals[offerID].offerStatus = OfferStatus.OFFER_ACCEPTED;
 
-        _deals[offerID].executorCounterpart.amount = _deals[offerID].collateral;
+        _deals[offerID].providerCounterpart.amount = _deals[offerID].collateral;
 
         // initialize proof with current block number
         _deals[offerID].dealStartBlock = block.number;
@@ -216,16 +216,16 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     {
         Deal storage store = _deals[offerId];
 
-        if (store.executorCounterpart.partyAddress == msg.sender) {
-            store.executorCounterpart.cancel = true;
+        if (store.providerCounterpart.partyAddress == msg.sender) {
+            store.providerCounterpart.cancel = true;
         }
         else {
             store.creatorCounterpart.cancel = true;
         }
 
-        if (store.executorCounterpart.cancel == true && store.creatorCounterpart.cancel == true) {
+        if (store.providerCounterpart.cancel == true && store.creatorCounterpart.cancel == true) {
             _deals[offerId].offerStatus = OfferStatus.OFFER_CANCELLED;
-            removeOfferForUser(store.executorCounterpart.partyAddress, offerId);
+            removeOfferForUser(store.providerCounterpart.partyAddress, offerId);
             removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
             prepWithdrawal(offerId, responses[offerId].successCount);
             withdraw(offerId, 10000);
@@ -254,7 +254,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     // function that saves time of proof sending
-    function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetWindow) public onlyExecutor(offerId) {
+    function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetWindow) public onlyProvider(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
         require(block.number < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
@@ -324,23 +324,23 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         uint256 cut = ((_proofSuccessRate[offerId] * _deals[offerId].creatorCounterpart.amount) / 100 );
 
         if (_proofSuccessRate[offerId] > requiredRate) {
-            _deals[offerId].executorCounterpart.amount = 0;
+            _deals[offerId].providerCounterpart.amount = 0;
         } 
         
         treasury.withdraw(
             _deals[offerId].erc20TokenDenomination,
             _deals[offerId].creatorCounterpart.partyAddress, 
             _deals[offerId].creatorCounterpart.amount,
-            _deals[offerId].executorCounterpart.partyAddress, 
-            _deals[offerId].executorCounterpart.amount,
+            _deals[offerId].providerCounterpart.partyAddress, 
+            _deals[offerId].providerCounterpart.amount,
             cut
         );
 
     }
 
-    function setGovernor(address _governor) internal {
-        governor = _governor;
-        emit AuthorityUpdated(governor);
+    function setAdmin(address _admin) internal {
+        admin = _admin;
+        emit AuthorityUpdated(admin);
     }
 
     /* ========== GOV ONLY ========== */
@@ -348,12 +348,12 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     /**
     * @notice Allows the owner to withdraw any LINK balance on the contract
     */
-    function withdrawLink() public onlyGovernor {
+    function withdrawLink() public onlyAdmin {
         LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
         require(link.transfer(msg.sender, link.balanceOf(address(this))), "Unable to transfer");
     }
 
-    function setTreasury(address _treasury) public onlyGovernor {
+    function setTreasury(address _treasury) public onlyAdmin {
         require(_treasury != address(0), "INVALID ADDRESS");
         treasury = ITreasury(_treasury);
     }
@@ -366,7 +366,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * the request to cancel
     * @param _expiration The expiration generated for the request to cancel
     */
-    function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyGovernor {    
+    function cancelRequest(bytes32 _requestId, uint256 _payment, bytes4 _callbackFunctionId, uint256 _expiration) public onlyAdmin {    
         cancelChainlinkRequest(_requestId, _payment, _callbackFunctionId, _expiration);
     }
 
@@ -376,10 +376,23 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     /*****************************************************************/
 
-    function getOffer(uint256 offerId) public view returns (address, address, uint8)
+    function getOffer(uint256 offerId) public view returns (uint256, uint256, uint256, uint256, uint256, uint256, address, string memory, uint256, string memory, address, address, uint8)
     {
         Deal storage store = _deals[offerId];
-        return (store.creatorCounterpart.partyAddress, store.executorCounterpart.partyAddress, uint8(store.offerStatus));
+        return (
+            store.offerId, 
+            store.dealStartBlock, 
+            store.dealLengthInBlocks, 
+            store.proofFrequencyInBlocks, 
+            store.price,
+            store.collateral,
+            store.erc20TokenDenomination,
+            store.ipfsFileCID,
+            store.fileSize,
+            store.blake3Checksum,
+            store.creatorCounterpart.partyAddress, 
+            store.providerCounterpart.partyAddress, 
+            uint8(store.offerStatus));
     }
 
     function getDeal(uint256 offerID) public view returns (Deal memory) {
