@@ -26,7 +26,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     uint256 private _offerId;
     mapping(uint256 => Deal) public _deals;
-    mapping(uint256 => mapping (uint256 => uint256)) public _proofblocks;
+    mapping(uint256 => mapping (uint256 => uint256)) public _proofblocks; // offerID => (proofWindowCount => block.number)
     mapping(address => uint256[]) internal _openOffers;
     mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-10000; 10000 = 100%)
     mapping(uint256 => ResponseData) public responses;
@@ -43,14 +43,13 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     // Do we need this? TODO: Remove if not.
     struct OfferCounterpart {
-        bytes32 commitment;
+        bytes commitment;
         uint256 amount;
         address partyAddress;
         bool cancel;
     }
 
     struct Deal {
-        uint256 offerId;
         uint256 dealStartBlock;
         uint256 dealLengthInBlocks;
         uint256 proofFrequencyInBlocks;
@@ -153,7 +152,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         require(token != chainlinkTokenAddress(), "LINK_NOT_ALLOWED");   
 
         _offerId++;
-        _deals[_offerId].offerId = _offerId;
         _deals[_offerId].dealLengthInBlocks = dealLength;
         _deals[_offerId].proofFrequencyInBlocks = proofFrequency;
         _deals[_offerId].price = bounty;
@@ -254,13 +252,16 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     // function that saves time of proof sending
-    function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetWindow) public onlyProvider(offerId) {
+    function saveProof(bytes calldata _proof, uint256 offerId) public onlyProvider(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
         require(block.number < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
 
-        _proofblocks[offerId][targetWindow] = block.number;
-        emit ProofAdded(offerId, _proofblocks[offerId][targetWindow], _proof);
+        uint256 proofWindowCount = responses[offerId].successCount;
+
+        _proofblocks[offerId][proofWindowCount] = block.number;
+        _deals[offerId].providerCounterpart.commitment = _proof;
+        emit ProofAdded(offerId, _proofblocks[offerId][proofWindowCount], _proof);
     }
  
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
@@ -376,11 +377,10 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     /*****************************************************************/
 
-    function getOffer(uint256 offerId) public view returns (uint256, uint256, uint256, uint256, uint256, uint256, address, string memory, uint256, string memory, address, address, uint8)
+    function getOffer(uint256 offerId) public view returns (uint256, uint256, uint256, uint256, uint256, address, string memory, uint256, string memory, address, address, uint8)
     {
         Deal storage store = _deals[offerId];
         return (
-            store.offerId, 
             store.dealStartBlock, 
             store.dealLengthInBlocks, 
             store.proofFrequencyInBlocks, 
