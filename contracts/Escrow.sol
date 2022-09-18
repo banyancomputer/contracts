@@ -31,10 +31,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     mapping(uint256 => uint256) public _proofSuccessRate; // offerId => proofSuccessRate (0-10000; 10000 = 100%)
     mapping(uint256 => ResponseData) public responses;
 
-    uint256 private _openOfferAcc;
-    uint256 private _totalOfferCompletedAcc;
-    uint256 private _totalOfferClaimAcc;
-
     // Oracle Configuration
     address private oracle;
     bytes32 private jobId;
@@ -43,7 +39,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
 
     // Do we need this? TODO: Remove if not.
     struct OfferCounterpart {
-        bytes commitment;
         uint256 amount;
         address partyAddress;
         bool cancel;
@@ -109,9 +104,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         setChainlinkToken(_link);
         setChainlinkOracle(_oracle);
 
-        _openOfferAcc = 0;
-        _totalOfferCompletedAcc = 0;
-        _totalOfferClaimAcc = 0;
         _offerId = 0;
         fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
@@ -252,16 +244,19 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     // function that saves time of proof sending
-    function saveProof(bytes calldata _proof, uint256 offerId) public onlyProvider(offerId) {
+    function saveProof(bytes calldata _proof, uint256 offerId) public nonReentrant() onlyProvider(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
         require(block.number < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
 
-        uint256 proofWindowCount = responses[offerId].successCount;
+        uint256 offset = block.number - _deals[offerId].dealStartBlock;
+        require(offset < _deals[offerId].dealLengthInBlocks, "Proof window is over"); // Potentially remove this revert as it is redundant with the above require.
 
-        _proofblocks[offerId][proofWindowCount] = block.number;
-        _deals[offerId].providerCounterpart.commitment = _proof;
-        emit ProofAdded(offerId, _proofblocks[offerId][proofWindowCount], _proof);
+        uint256 proofWindowNumber = offset / _deals[offerId].proofFrequencyInBlocks; // Proofs submit as entries within a range.
+        require(_proofblocks[offerId][proofWindowNumber] != 0, "Proof already submitted");
+
+        _proofblocks[offerId][proofWindowNumber] = block.number;
+        emit ProofAdded(offerId, _proofblocks[offerId][proofWindowNumber], _proof);
     }
  
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
