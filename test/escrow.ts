@@ -20,11 +20,11 @@ describe("Escrow", async () => {
     this.Treasury = await ethers.getContractFactory("Treasury");
     this.Escrow = await ethers.getContractFactory("Escrow");
 
-    [ this.owner, this.executor ] = await ethers.getSigners();
+    [ this.owner, this.provider ] = await ethers.getSigners();
     this.juicedAccountMainnet = await ethers.getSigner(MAINNET_JUICED_WALLET);
     this.juicedAccountRinkeby = await ethers.getSigner(RINKEBY_JUICED_WALLET);
     this.ownerAddress = await this.owner.getAddress();
-    this.executorAddress = await this.executor.getAddress();
+    this.providerAddress = await this.provider.getAddress();
     
 
     const abiEscrow = require('../artifacts/contracts/Escrow.sol/Escrow.json').abi;
@@ -46,16 +46,16 @@ describe("Escrow", async () => {
     // ERC20Mock stuff
     const approve = await this.erc20Mock.approve(this.treasury.address, 10000);
     await approve.wait();
-    const transfer = await this.erc20Mock.transfer(this.executorAddress, 10000);
+    const transfer = await this.erc20Mock.transfer(this.providerAddress, 10000);
     await transfer.wait();
-    const approveExecutor = await this.erc20Mock.connect(this.executor).approve(this.treasury.address, 1000);
-    await approveExecutor.wait();
+    const approveProvider = await this.erc20Mock.connect(this.provider).approve(this.treasury.address, 1000);
+    await approveProvider.wait();
 
     this.offerParams = [
       this.erc20Mock.address, // creatorTokenAddress
       10, //creatorTokenAmount - used for ERC20 and ERC1155
-      this.executorAddress, // executorAddress
-      10, //executorTokenAmount - used for ERC20 and ERC1155
+      this.providerAddress, // providerAddress
+      10, //providerTokenAmount - used for ERC20 and ERC1155
       500 // CID
     ];
   });
@@ -102,7 +102,7 @@ describe("Escrow", async () => {
     await offer.wait();
     const offerArray = await this.escrow['getOffer(uint256)'](offerId);
     expect(offerArray[0]).to.equal(this.ownerAddress);
-    expect(offerArray[1]).to.equal(this.executorAddress);
+    expect(offerArray[1]).to.equal(this.providerAddress);
     expect(offerArray[2]).to.equal(1);
   });
 
@@ -115,7 +115,7 @@ describe("Escrow", async () => {
     const offerResult = await this.EscrowInterface.decodeFunctionResult("startOffer", offerTx.logs[6].data);
     const offerId = offerResult[0].toNumber();
 
-    const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+    const saveProof = await this.escrow.connect(this.provider).saveProof(offerId, file);
     await saveProof.wait();
 
     expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
@@ -132,7 +132,7 @@ describe("Escrow", async () => {
 
     await expect(this.escrow.saveProof(offerId, file)).to.be.reverted;
 
-    const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+    const saveProof = await this.escrow.connect(this.provider).saveProof(offerId, file);
     await saveProof.wait();
 
     expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
@@ -148,7 +148,7 @@ describe("Escrow", async () => {
     const offerId = offerResult[0].toNumber();
 
     for (let i = 0; i < 5; i++) {
-      const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+      const saveProof = await this.escrow.connect(this.provider).saveProof(offerId, file);
       await saveProof.wait();
       await mine(98);
       expect(await this.escrow.getLatestProof(offerId)).to.equal("0x" + file.toString('hex'));
@@ -165,7 +165,7 @@ describe("Escrow", async () => {
     const offerId = offerResult[0].toNumber();
 
     for (let i = 0; i < 5; i++) {
-      const saveProof = await this.escrow.connect(this.executor).saveProof(offerId, file);
+      const saveProof = await this.escrow.connect(this.provider).saveProof(offerId, file);
       await saveProof.wait();
 
       await mine(i%2 ? 97 : 100); // miss blocks every 2nd block

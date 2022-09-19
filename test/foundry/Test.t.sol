@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
-import "../../contracts/Authority.sol";
 import "../../contracts/Escrow.sol";
 import "../../contracts/Treasury.sol";
 
@@ -14,13 +13,11 @@ contract Test is BaseTest {
 
     // using Chainlink for Chainlink.Request;
 
-    Authority authority;
-
-    address payable governor;
+    address payable admin;
     address payable guardian;
     address payable policy;
     address payable vault;
-    address payable replacementGovernor;
+    address payable replacementAdmin;
 
     constructor() {
         preSetup(5);
@@ -30,13 +27,12 @@ contract Test is BaseTest {
         super.setUp();
 
         //Create attacker address and two mock addresses for pools.
-        governor = users[0];
+        admin = users[0];
         guardian = users[1];
         policy = users[2];
         vault = users[3];
-        replacementGovernor = users[4];
+        replacementAdmin = users[4];
         //Instantiate contracts
-        authority = new Authority(governor, guardian, policy, vault);
 
     }
 
@@ -49,18 +45,13 @@ contract Test is BaseTest {
         
         vm.prank(guardian);
 
-        // vm.expectRevert();
-        authority.pushGovernor(replacementGovernor, true);
-
-        vm.prank(governor);
-        authority.pushGovernor(replacementGovernor, true);
     }
 
     function success() internal override {
         /** SUCCESS CONDITIONS */
 
         // Check to see if the score is as modified.
-        // vm.expectEmit(governor, replacementGovernor, true);
+        // vm.expectEmit(admin, replacementAdmin, true);
     }
 
 }

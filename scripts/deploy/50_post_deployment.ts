@@ -4,7 +4,6 @@ import { waitFor } from "../txHelper";
 import { CONTRACTS, CONFIGURATION } from "../constants";
 import { NomicLabsHardhatPluginError } from "hardhat/plugins";
 import {
-    Authority__factory,
     Treasury__factory,
     Escrow__factory,
 } from "../../types";
@@ -27,7 +26,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     
     const authority = await Authority__factory.connect(authorityDeployment.address, signer);
     console.log("Authority address:", authority.address);
-    console.log("Authority Governor Address:", await authority.governor());
+    console.log("Authority Admin Address:", await authority.admin());
 
     const treasury = await Treasury__factory.connect(treasuryDeployment.address, signer);
     

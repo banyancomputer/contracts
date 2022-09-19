@@ -7,10 +7,14 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "hardhat/console.sol";
 
 contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgradeable {
+
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     /* ========== EVENTS ========== */
 
@@ -18,51 +22,44 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
 
     event WithdrawERC20(address indexed token, address indexed recipient, uint256 amount);
 
-
-    /* ========== DATA STRUCTURES ========== */
-
-    enum STATUS {
-        NON,
-        RESERVEDEPOSITOR,
-        RESERVESPENDER
-    }
+    event NewPerformanceFee(uint256 oldFee, uint256 newFee);
 
     /* ========== STATE VARIABLES ========== */
 
-    string internal notApproved = "Treasury: not approved";
-    string internal invalidToken = "Treasury: invalid token";
-
-    mapping(STATUS => mapping(address => bool)) public permissions;
+    mapping(address => bool) public authorized;
 
     // Fee - default 0.1%
     uint256 public fee = 10; // 1 == 0.01%
     uint256 public feeDivisor = 10000;
 
     // addresses
-    address public governor;
-
-    // Treasury balance
-    mapping(address => uint256) public erc20Treasury; // tokenAddress => feePot
+    address public admin;
+    address public escrow;
 
     error UNAUTHORIZED();
 
     /* ========== INITIALIZATION ========== */
 
-    function _initialize(address _authority, address _governor) external initializer
+    function _initialize(address _admin, address _escrow) external initializer
     {
-        require(_authority != address(0), "0 Address Revert");
+        require(_admin != address(0), "0 Address Revert");
+        require(_escrow != address(0), "0 Address Revert");
         
         __ReentrancyGuard_init();
         __Ownable_init();
-        transferOwnership(_governor);
+        transferOwnership(_admin);
         
-        governor = _governor;
+        admin = _admin;
+        escrow = _escrow;
+
+        authorized[_admin] = true;
+        authorized[_escrow] = true;
     }
 
     /* ========== Modifiers ========== */
 
-    modifier onlyGovernor {
-	    if (msg.sender != governor) revert UNAUTHORIZED();
+    modifier onlyAdmin {
+	    if (msg.sender != admin) revert UNAUTHORIZED();
 	_;
     }
 
@@ -76,68 +73,69 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
         uint256 _amount,
         address _token,        
         address _sender
-    ) external {        
-        IERC20(_token).transferFrom(_sender, address(this), _amount);
+    ) external {     
+        IERC20(_token).safeTransferFrom(_sender, address(this), _amount);
         emit DepositERC20(_token, _amount);
-    
-        // collecting fees from everyone
-        // TODO: should we continue collecting fee from executor's deposit? 
-        collectFee(_token, _amount);
     }
 
     /**
-     * @notice allow approved address to withdraw from reserves ||||| TODO: wait for payment approval, @audit-issue ATM reservespender can withdraw any arbitrary amount. Need to check in on vault withdrawal.
+     * @notice allow approved address to withdraw from reserves
      * @param _token address
      * @param _creator address
      * @param _creatorCounterpart uint256
-     * @param _executor address
-     * @param _executorCounterpart uint256
+     * @param _provider address
+     * @param _providerCounterpart uint256
      * @param _cut uint256     
      */
-    function withdraw(address _token, address _creator, uint256 _creatorCounterpart, address _executor, uint256 _executorCounterpart, uint256 _cut) external {
-        require(permissions[STATUS.RESERVESPENDER][msg.sender], notApproved); // check if it's escrow's contract calling
+    function withdraw(address _token, address _creator, uint256 _creatorCounterpart, address _provider, uint256 _providerCounterpart, uint256 _cut) external {
+        require(authorized[msg.sender] == true, "Not approved"); // check if it's escrow's contract calling
       
-        // send the cut to the executor based on success rate + his counterpart - the fee
-        uint256 executorPayment = _cut + _executorCounterpart - getFee(_executorCounterpart);
-        collectFee(_token, _executorCounterpart);
-        IERC20(_token).transferFrom(address(this), _executor, executorPayment);
-        emit WithdrawERC20(_token, _executor, executorPayment);
+        // send the cut to the provider based on success rate + his counterpart - the fee
+        uint256 providerPayment = _cut + _providerCounterpart - getFee(_providerCounterpart);
+        IERC20(_token).safeTransferFrom(address(this), _provider, providerPayment);
+        emit WithdrawERC20(_token, _provider, providerPayment);
 
 
-        // send the remainder to offer creator - the fee
-        uint256 remainder = _creatorCounterpart - _cut - getFee(_creatorCounterpart);
-        collectFee(_token, _creatorCounterpart); 
-        IERC20(_token).transferFrom(address(this), _creator, remainder);
-        emit WithdrawERC20(_token, _creator, remainder);
+        // send the refund to offer creator - the fee
+        // ? is this a noticeably larger amount of gas spend than just saying "i'd like to withdraw my USDC, and i'd like to mark the client's portion of USDC as available to withdraw from the treasury, but not actually transfer the funds over to their account" ?
+        uint256 refund = _creatorCounterpart - _cut - getFee(_creatorCounterpart);
+        IERC20(_token).safeTransferFrom(address(this), _creator, refund);
+        emit WithdrawERC20(_token, _creator, refund);
 
     }
+
+    /* ========== GOV ONLY ========== */
     
-     function setPermission(
-        STATUS _status,
-        address _address,
-        bool _permission
-    ) public {
-        permissions[_status][_address] = _permission;
+     function transferAdmin(address _address) public onlyAdmin {
+        admin = _address;
     }
+
+    function setAuthorized(address _address, bool _status) public onlyAdmin {
+        authorized[_address] = _status;
+    }
+
+    function setFee(uint256 _fee) public onlyAdmin {
+        require(_fee < 10000, "_fee must be less than 100%");
+        emit NewPerformanceFee(fee, _fee);
+        fee = _fee; 
+    }
+
+    function toAdmin(address _token, uint256 _amount) public onlyAdmin {
+        IERC20(_token).safeTransferFrom(address(this), admin, _amount);
+    }
+
+    /*****************************************************************/
+
+                        /* VIEW FUNCTIONS */
+
+    /*****************************************************************/
 
     function getTokenBalance(address _token) public view returns (uint256) {
         return IERC20(_token).balanceOf(address(this));
-    }
-
-    function collectFee(address _token, uint256 _amout) internal {             
-        erc20Treasury[_token] += getFee(_amout);
     }
 
     function getFee(uint256 _amount) public view returns (uint256) {
         return (_amount * fee) / feeDivisor;
     }
 
-    function setFee(uint256 _fee) public onlyGovernor {
-        require(_fee < 10000, "_fee must be less than 100%");
-        fee = _fee;
-    }
-
-    function getTreasuryBalance(address _token) public view returns (uint256) {
-        return erc20Treasury[_token];
-    }
 }

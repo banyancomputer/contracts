@@ -9,9 +9,9 @@ describe("Treasury", async () => {
     this.Authority = await ethers.getContractFactory("Authority");
     this.Treasury = await ethers.getContractFactory("Treasury");
     this.Escrow = await ethers.getContractFactory("Escrow");
-    [ this.owner, this.executor ] = await ethers.getSigners();
+    [ this.owner, this.provider ] = await ethers.getSigners();
     this.ownerAddress = await this.owner.getAddress();
-    this.executorAddress = await this.executor.getAddress();
+    this.providerAddress = await this.provider.getAddress();
 
     const abiEscrow = require('../artifacts/contracts/Escrow.sol/Escrow.json').abi;
     this.EscrowInterface = new ethers.utils.Interface(abiEscrow);
@@ -32,16 +32,16 @@ describe("Treasury", async () => {
     // ERC20Mock stuff
     const approve = await this.erc20Mock.approve(this.treasury.address, 100000);
     await approve.wait();
-    const transfer = await this.erc20Mock.transfer(this.executorAddress, 100000);
+    const transfer = await this.erc20Mock.transfer(this.providerAddress, 100000);
     await transfer.wait();
-    const approveExecutor = await this.erc20Mock.connect(this.executor).approve(this.treasury.address, 10000);
-    await approveExecutor.wait();
+    const approveProvider = await this.erc20Mock.connect(this.provider).approve(this.treasury.address, 10000);
+    await approveProvider.wait();
 
     this.offerParams = [
       this.erc20Mock.address, // creatorTokenAddress
       1000, //creatorTokenAmount 
-      this.executorAddress, // executorAddress
-      1000, //executorTokenAmount
+      this.providerAddress, // providerAddress
+      1000, //providerTokenAmount
       500 // CID 
     ];
   });
