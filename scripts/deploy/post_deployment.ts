@@ -18,20 +18,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     console.log("Account balance:", ethers.utils.formatEther((await signer.getBalance()).toString()) + " ETH");
 
-    const authorityDeployment = await deployments.get(CONTRACTS.authority);
     const treasuryDeployment = await deployments.get(CONTRACTS.treasury);
     const escrowDeployment = await deployments.get(CONTRACTS.escrow);
 
     const deployerAddress =  signer.getAddress();
-    
-    const authority = await Authority__factory.connect(authorityDeployment.address, signer);
-    console.log("Authority address:", authority.address);
-    console.log("Authority Admin Address:", await authority.admin());
 
     const treasury = await Treasury__factory.connect(treasuryDeployment.address, signer);
-    
-    await authority.pushVault(treasury.address, true);
-    console.log("Authority Vault:", await authority.vault());
 
 }
     
