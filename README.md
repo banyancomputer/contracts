@@ -27,7 +27,7 @@ copy .env.example .env # (windows)
 
 #To Deploy Contracts:
 source .env
-forge script script/Banyan.s.sol:BanyanDeployScript --rpc-url $GOERLI_RPC_ENDPOINT --broadcast
+forge script script/Banyan.s.sol:BanyanDeployScript --rpc-url $GOERLI_RPC_ENDPOINT --private-key $DEPLOYER_PK --broadcast
 
 # Let's fork mainnet
 anvil --fork-url https://mainnet.infura.io/v3/$INFURA_KEY
