@@ -25,31 +25,9 @@ npm install
 cp .env.example .env # (linux)
 copy .env.example .env # (windows)
 
-### Hardhat usage:
-## Just Compile: 
-npx hardhat compile
-
-## Deploy locally: 
-# Dry deployment: 
-npx hardhat deploy
-
-# With node running:
-npx hardhat node
-
-# Connect with console:
-npx hardhat console --network localhost
-
-## Compile and Deploy to Rinkeby:
-npx hardhat deploy --network rinkeby
-
-## Test: 
-npx hardhat test
-
-# Generate typescript files
-npx hardhat typechain
-
-# Clean artifacts (doesn't need to be versioned):
-npx hardhat clean
+#To Deploy Contracts:
+source .env
+forge script script/Banyan.s.sol:BanyanDeployScript --rpc-url $GOERLI_RPC_ENDPOINT --broadcast
 
 # Let's fork mainnet
 anvil --fork-url https://mainnet.infura.io/v3/$INFURA_KEY
