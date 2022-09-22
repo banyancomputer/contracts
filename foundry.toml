@@ -25,8 +25,8 @@ remappings = [
 test = 'test/foundry'
 cache_path  = 'forge-cache'
 
-[DEPLOYER]
-DEPLOYER = "${DEPLOYER}"
+[deployer]
+deployer = "${DEPLOYER_PK}"
 
 [rpc_endpoints]
 goerli = "${GOERLI_RPC_ENDPOINT}"
