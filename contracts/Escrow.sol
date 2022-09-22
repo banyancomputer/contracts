@@ -223,7 +223,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
             removeOfferForUser(store.providerCounterpart.partyAddress, offerId);
             removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
             prepWithdrawal(offerId, responses[offerId].successCount);
-            withdraw(offerId, 10000);
+            withdraw(offerId, _proofSuccessRate[offerId]);
         }
 
         emit OfferCancelled(msg.sender, offerId);
@@ -253,13 +253,15 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
         require(targetBlockNumber < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
-        require(block.number > targetBlockNumber, "Proof cannot be sent in the future");
+        require(block.number >= targetBlockNumber, "Proof cannot be sent in future");
+        require(block.number <= targetBlockNumber + _deals[offerId].proofFrequencyInBlocks, "Saving proof outside of range");
 
         uint256 offset = targetBlockNumber - _deals[offerId].dealStartBlock;
         require(offset < _deals[offerId].dealLengthInBlocks, "Proof window is over"); // Potentially remove this revert as it is redundant with the above require.
 
-        uint256 proofWindowNumber = offset / _deals[offerId].proofFrequencyInBlocks; // Proofs submit as entries within a range.
+        uint256 proofWindowNumber = offset / _deals[offerId].proofFrequencyInBlocks; // Proofs submit as entries within a range, denoted as the nth proofWindow.
         require(_proofblocks[offerId][proofWindowNumber] != 0, "Proof already submitted");
+        
 
         _proofblocks[offerId][proofWindowNumber] = block.number;
         emit ProofAdded(offerId, _proofblocks[offerId][proofWindowNumber], _proof);
@@ -318,7 +320,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     }
 
     function prepWithdrawal(uint256 offerId, uint256 successfulProofs) internal {
-        _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks) * 100;
+        _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks * _deals[offerId].dealLengthInBlocks) * 100;
     }
 
     function withdraw(uint256 offerId, uint256 requiredRate) internal {
