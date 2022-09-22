@@ -8,10 +8,12 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import "hardhat/console.sol";
 
-contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgradeable {
+contract Treasury is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgradeable, UUPSUpgradeable {
 
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -40,21 +42,23 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
 
     /* ========== INITIALIZATION ========== */
 
-    function _initialize(address _admin, address _escrow) external initializer
+    function _initialize(address _admin, address _escrow) public initializer()
     {
         require(_admin != address(0), "0 Address Revert");
         require(_escrow != address(0), "0 Address Revert");
         
         __ReentrancyGuard_init();
         __Ownable_init();
+        admin = msg.sender;
         transferOwnership(_admin);
         
-        admin = _admin;
         escrow = _escrow;
 
         authorized[_admin] = true;
         authorized[_escrow] = true;
     }
+
+    function _authorizeUpgrade(address) internal override onlyAdmin() {}
 
     /* ========== Modifiers ========== */
 
@@ -137,5 +141,9 @@ contract Treasury is OwnableUpgradeable, ReentrancyGuardUpgradeable, ERC20Upgrad
     function getFee(uint256 _amount) public view returns (uint256) {
         return (_amount * fee) / feeDivisor;
     }
+
+    fallback() external payable {}
+
+    receive() payable external {}
 
 }

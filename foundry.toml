@@ -1,7 +1,7 @@
 [profile.default]
 src = 'contracts'
 out = 'out'
-libs = ["node_modules", "lib"]
+libs = ["lib", "node_modules"]
 remappings = [
     '@openzeppelin/=node_modules/@openzeppelin/',
     'eth-gas-reporter/=node_modules/eth-gas-reporter/',
@@ -24,4 +24,13 @@ remappings = [
 ]
 test = 'test/foundry'
 cache_path  = 'forge-cache'
+
+[DEPLOYER]
+DEPLOYER = "${DEPLOYER}"
+
+[rpc_endpoints]
+goerli = "${GOERLI_RPC_ENDPOINT}"
+
+[etherscan]
+goerli = { key = "${ETHERSCAN_API_KEY}" }
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

@@ -7,6 +7,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IEscrow.sol";
 import "./interfaces/ITreasury.sol";
 
@@ -14,7 +15,7 @@ import { EscrowMath } from "./libraries/EscrowMath.sol";
 
 import "hardhat/console.sol";
 
-contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IEscrow
+contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IEscrow
 {
     using Chainlink for Chainlink.Request;
 
@@ -86,18 +87,20 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     * @param _admin Address of the Govenor contract
     * @param _link The address of the LINK token contract
     * @param _vault The address of the Banyan vault contract
-    * @param _vault The address of the treasury contract for interactions between parties
     */
 
-    function _initialize(address _link, address _admin, address _treasury, address _vault, address _oracle) external initializer
+    function _initialize(address _link, address _admin, address _treasury, address _vault, address _oracle) public initializer()
     {
         require(_admin != address(0), "0 Address Revert");
+        __UUPSUpgradeable_init();
         
+        __Context_init();
         __ReentrancyGuard_init();
         __Ownable_init();
-        transferOwnership(_admin);
+        
 
-        admin = _admin;
+        admin = msg.sender;
+        transferOwnership(_admin);
         vault = _vault;
         treasury = ITreasury(_treasury);
         
@@ -107,6 +110,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
         _offerId = 0;
         fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
+
+    function _authorizeUpgrade(address) internal override onlyAdmin() {}
 
     /* ========== MODIFIERS ========== */
 
@@ -218,7 +223,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
             removeOfferForUser(store.providerCounterpart.partyAddress, offerId);
             removeOfferForUser(store.creatorCounterpart.partyAddress, offerId);
             prepWithdrawal(offerId, responses[offerId].successCount);
-            withdraw(offerId, 10000);
+            withdraw(offerId, _proofSuccessRate[offerId]);
         }
 
         emit OfferCancelled(msg.sender, offerId);
@@ -244,16 +249,19 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     // function that saves time of proof sending
-    function saveProof(bytes calldata _proof, uint256 offerId) public nonReentrant() onlyProvider(offerId) {
+    function saveProof(bytes calldata _proof, uint256 offerId, uint256 targetBlockNumber) public nonReentrant() onlyProvider(offerId) {
         require(_proof.length > 0, "No proof provided"); // check if proof is empty
         require(_deals[offerId].offerStatus == OfferStatus.OFFER_CREATED, "ERROR: OFFER_NOT_ACTIVE");
-        require(block.number < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
+        require(targetBlockNumber < _deals[offerId].dealStartBlock + _deals[offerId].dealLengthInBlocks && block.number > _deals[offerId].dealStartBlock, "Out of block timerange");
+        require(block.number >= targetBlockNumber, "Proof cannot be sent in future");
+        require(block.number <= targetBlockNumber + _deals[offerId].proofFrequencyInBlocks, "Saving proof outside of range");
 
-        uint256 offset = block.number - _deals[offerId].dealStartBlock;
+        uint256 offset = targetBlockNumber - _deals[offerId].dealStartBlock;
         require(offset < _deals[offerId].dealLengthInBlocks, "Proof window is over"); // Potentially remove this revert as it is redundant with the above require.
 
-        uint256 proofWindowNumber = offset / _deals[offerId].proofFrequencyInBlocks; // Proofs submit as entries within a range.
+        uint256 proofWindowNumber = offset / _deals[offerId].proofFrequencyInBlocks; // Proofs submit as entries within a range, denoted as the nth proofWindow.
         require(_proofblocks[offerId][proofWindowNumber] != 0, "Proof already submitted");
+        
 
         _proofblocks[offerId][proofWindowNumber] = block.number;
         emit ProofAdded(offerId, _proofblocks[offerId][proofWindowNumber], _proof);
@@ -312,7 +320,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     }
 
     function prepWithdrawal(uint256 offerId, uint256 successfulProofs) internal {
-        _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks) * 100;
+        _proofSuccessRate[offerId] = (successfulProofs / _deals[offerId].proofFrequencyInBlocks * _deals[offerId].dealLengthInBlocks) * 100;
     }
 
     function withdraw(uint256 offerId, uint256 requiredRate) internal {
@@ -445,5 +453,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, OwnableUp
     function getChainlinkToken() public view returns (address) {
         return chainlinkTokenAddress();
     }
+
+    fallback() external payable {}
+
+    receive() payable external {}
 
 }
