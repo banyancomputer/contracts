@@ -1,6 +1,6 @@
 ---
 name: Report a bug
-about: Something with Osmosis is not working as expected
+about: Something with the contracts is not working as expected
 title: ''
 labels: 'type:bug'
 assignees: ''
