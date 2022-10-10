@@ -13,23 +13,24 @@ contract BanyanDeployScript is Script {
 
         vm.startBroadcast(deployer);
 
-        Escrow escrowproxy = new Escrow();
+        Escrow escrowImplementation = new Escrow();
                 
-        Treasury treasuryproxy = new Treasury();
+        Treasury treasuryImplementation = new Treasury();
 
-        address escrowAddress = address(escrowproxy);
+        address escrowAddress = address(escrowImplementation);
         
-        address treasuryAddress = address(treasuryproxy);
+        address treasuryAddress = address(treasuryImplementation);
 
+        // Suitable for Goerli deployment
         address link = 0x326C977E6efc84E512bB9C30f76E30c160eD06FB;
 
         address oracle = 0xF1a252307Ff9F3fbB9598c9a181385122948b8Ae;
 
         address admin = 0x2C231Fb9B59b56CdDD413443D90628384b3F1d60;
 
-        escrowproxy._initialize(link, admin, treasuryAddress, treasuryAddress, oracle);
+        escrowImplementation._initialize(link, admin, treasuryAddress, treasuryAddress, oracle);
         
-        treasuryproxy._initialize(escrowAddress, admin);
+        treasuryImplementation._initialize(escrowAddress, admin);
 
         vm.stopBroadcast();
     }

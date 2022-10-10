@@ -20,7 +20,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     using Chainlink for Chainlink.Request;
 
     ITreasury public treasury;
-    address public vault;
     address public override admin;
 
     uint256 private fee;
@@ -86,10 +85,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     * @dev Sets the storage for the specified addresses
     * @param _admin Address of the Govenor contract
     * @param _link The address of the LINK token contract
-    * @param _vault The address of the Banyan vault contract
     */
 
-    function _initialize(address _link, address _admin, address _treasury, address _vault, address _oracle) public initializer()
+    function _initialize(address _link, address _admin, address _treasury, address _oracle) public initializer()
     {
         require(_admin != address(0), "0 Address Revert");
         __UUPSUpgradeable_init();
@@ -101,7 +99,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
 
         admin = msg.sender;
         transferOwnership(_admin);
-        vault = _vault;
         treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
@@ -169,6 +166,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _openOffers[msg.sender].push(_offerId);
 
         // Contract creator moves funds to Treasury
+        IERC20(token).approve(msg.sender, collateral);
         treasury.deposit(collateral, token, msg.sender);
 
         emit NewOffer(msg.sender, providerAddress, _offerId );
@@ -188,6 +186,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
 
         // initialize proof with current block number
         _deals[offerID].dealStartBlock = block.number;
+
+        IERC20(_deals[offerID].erc20TokenDenomination).approve(msg.sender, _deals[offerID].collateral);
 
         treasury.deposit(_deals[offerID].collateral, _deals[offerID].erc20TokenDenomination, msg.sender);
 
@@ -269,7 +269,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
  
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
-        require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
+        require(amount <= IERC20(tokenAddress).allowance(from, treasury), "UNAUTHORIZED");
         return true;
     }
     

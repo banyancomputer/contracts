@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
@@ -8,8 +8,8 @@ import {Utilities} from "./utils/Utilities.sol";
 contract BaseTest is Test {
     Utilities internal utils;
 
-    address payable[] users;
-    uint256 numOfUsers;
+    address payable[] public users;
+    uint256 public numOfUsers;
 
     function preSetup(uint _numOfUsers) internal {
         numOfUsers = _numOfUsers;
@@ -23,19 +23,4 @@ contract BaseTest is Test {
         users = utils.createUsers(numOfUsers);
     }
 
-    function runTest() public {
-        // run the exploit
-        exploit();
-
-        // verify the exploit
-        success();
-    }
-
-    function exploit() internal virtual {
-        /* IMPLEMENT YOUR EXPLOIT */
-    }
-
-    function success() internal virtual {
-        /* IMPLEMENT YOUR EXPLOIT */
-    }
 }
