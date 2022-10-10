@@ -269,7 +269,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
  
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
-        require(amount <= IERC20(tokenAddress).allowance(from, treasury), "UNAUTHORIZED");
+        require(amount <= IERC20(tokenAddress).allowance(from, address(treasury)), "UNAUTHORIZED");
         return true;
     }
     
