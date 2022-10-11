@@ -97,8 +97,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         __Ownable_init();
         
 
-        admin = msg.sender;
-        transferOwnership(_admin);
+        admin = _admin;
         treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
@@ -156,7 +155,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _deals[_offerId].blake3Checksum = blake3;
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
         _deals[_offerId].providerCounterpart.partyAddress = providerAddress;
-    
+
         verifyOfferIntegrity(token, bounty);
         verifyERC20(msg.sender, token, bounty);
 
@@ -166,8 +165,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _openOffers[msg.sender].push(_offerId);
 
         // Contract creator moves funds to Treasury
-        IERC20(token).approve(msg.sender, collateral);
+        IERC20(token).approve(msg.sender, collateral + bounty);
         treasury.deposit(collateral, token, msg.sender);
+        treasury.deposit(bounty, token, msg.sender);
 
         emit NewOffer(msg.sender, providerAddress, _offerId );
         return _offerId;
