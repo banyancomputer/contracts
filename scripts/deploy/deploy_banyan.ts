@@ -8,6 +8,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
     const escrowDeployment = await ethers.getContractFactory("Escrow");
     const treasuryDeployment = await ethers.getContractFactory("Treasury");
+
     const escrow = await hre.upgrades.deployProxy(escrowDeployment, ["address _link", "address _admin", "address _treasury", "address _oracle"]);
     const treasury = await hre.upgrades.deployProxy(escrowDeployment, ["address escrow", "address _admin"]);
 
