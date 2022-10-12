@@ -235,17 +235,64 @@ contract EscrowTest is BaseTest {
 
     // TODO: Proofs can be saved (at correct block times)
     function test_saveProof() public {
+        escrowImplementation = new Escrow();
+        treasuryImplementation = new Treasury();
 
-    }
+        proxyAdmin = new ProxyAdmin();
 
-    // TODO: The various verify statements revert or pass as expected
-    function test_verify() public {
+        escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
+        treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
 
+        vm.prank(user);
+
+        address(escrowProxy).call{value: 1, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
+        );
+
+        vm.prank(executor);
+
+        address(escrowProxy).call{value: 1, gas: 200000000}(
+            abi.encodeWithSignature("joinOffer(uint256)", 1)
+        );
+
+        vm.prank(executor);
+        address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("saveProof(bytes,uint256,uint256)", 1, 1, 1)
+        );
+
+        vm.prank(executor);
+        vm.expectRevert();
+        address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("fulfill(bytes32,uint256,uint256,uint256,uint16,string)", 1, 1, 1, 1, 1, "")
+        );
     }
 
     // TODO: Deal is completable and finalizable
     function test_finalization() public {
+        escrowImplementation = new Escrow();
+        treasuryImplementation = new Treasury();
 
+        proxyAdmin = new ProxyAdmin();
+
+        escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
+        treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
+
+        vm.prank(user);
+
+        address(escrowProxy).call{value: 1, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
+        );
+
+        vm.prank(executor);
+
+        address(escrowProxy).call{value: 1, gas: 200000000}(
+            abi.encodeWithSignature("joinOffer(uint256)", 1)
+        );
+
+        vm.prank(user);
+        address(escrowProxy).call{value: 1, gas: 200000000}(
+            abi.encodeWithSignature("complete(uint256,uint256)", 1, 8000)
+        );
     }
 
     // Admin, Treasury can be set; LINK withdrawable
