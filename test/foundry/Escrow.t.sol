@@ -6,6 +6,7 @@ import "../../contracts/Escrow.sol";
 import "../../contracts/Treasury.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import "./utils/mocks/USDC.sol";
 
 import {Utilities} from "./utils/Utilities.sol";
 import {BaseTest} from "./BaseTest.sol";
@@ -32,6 +33,7 @@ contract EscrowTest is BaseTest {
     TransparentUpgradeableProxy escrowProxy;
     TransparentUpgradeableProxy treasuryProxy;
     ProxyAdmin proxyAdmin;
+    MockERC20 usdc;
 
     constructor() {
         preSetup(6);
@@ -47,6 +49,12 @@ contract EscrowTest is BaseTest {
         creator = users[3];
         replacementAdmin = users[4];
         replacementTreasury = users[5];
+
+        usdc = new MockERC20("USDC", "USDC");
+
+        usdc.mint(admin, 1e20);
+        usdc.mint(user, 1e20);
+        usdc.mint(executor, 1e20);
 
     }
 
@@ -85,27 +93,38 @@ contract EscrowTest is BaseTest {
 
         proxyAdmin = new ProxyAdmin();
 
+        MockERC20 weth = new MockERC20("WETH", "WETH");
+
         escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
         treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
-
-        assertEq(proxyAdmin.getProxyImplementation(escrowProxy), address(escrowImplementation));
-        assertEq(proxyAdmin.getProxyImplementation(treasuryProxy), address(treasuryImplementation));
 
         vm.startPrank(user);
 
         // Does not initialize deal with 0 inputs
         vm.expectRevert();
         (bool s, bytes memory d) = address(escrowProxy).call{value: 0, gas: 200000000}(
-            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 0, 0, 0, 0, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 0, "", "")
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 0, 0, 0, 0, address(usdc), 0, "", "")
         );
+        assertEq(s, false);
         emit Response(s, d);
 
         // Does not initialize deal when user does not have enough balance
         vm.expectRevert();
-        (bool success, bytes memory data) = address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
+        (bool success, bytes memory data) = address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, address(weth), 1, "", "")
         );
+        assertEq(success, false);
         emit Response(success, data);
+
+        address(usdc).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("approve(address,uint256)", address(treasuryImplementation), 2)
+        );
+
+        (bool result, bytes memory txdata) = address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, address(usdc), 1, "", "")
+        );
+        assertEq(result, true);
+        emit Response(success, txdata);
         
         vm.stopPrank();
     }

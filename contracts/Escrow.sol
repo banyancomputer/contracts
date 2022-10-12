@@ -156,8 +156,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
         _deals[_offerId].providerCounterpart.partyAddress = providerAddress;
 
-        verifyOfferIntegrity(token, bounty);
-        verifyERC20(msg.sender, token, bounty);
+        require(verifyOfferIntegrity(token, bounty) == true, "Deposit error");
+        require(verifyERC20(msg.sender, token, bounty) == true, "Deposit error");
 
         _deals[_offerId].creatorCounterpart.amount = bounty;
         
@@ -165,9 +165,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _openOffers[msg.sender].push(_offerId);
 
         // Contract creator moves funds to Treasury
-        IERC20(token).approve(msg.sender, collateral + bounty);
-        treasury.deposit(collateral, token, msg.sender);
-        treasury.deposit(bounty, token, msg.sender);
+        treasury.deposit(collateral + bounty, token, msg.sender);
 
         emit NewOffer(msg.sender, providerAddress, _offerId );
         return _offerId;
