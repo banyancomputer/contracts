@@ -201,46 +201,24 @@ contract EscrowTest is BaseTest {
         escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
         treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
 
-        assertEq(proxyAdmin.getProxyImplementation(escrowProxy), address(escrowImplementation));
-        assertEq(proxyAdmin.getProxyImplementation(treasuryProxy), address(treasuryImplementation));
-
         vm.startPrank(user);
 
-        // JoinOffer should fail if deal starter has not enough funds
-        (bool startsuccess, bytes memory startdata) = address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
+        address(usdc).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("approve(address,uint256)", address(treasuryImplementation), 2)
         );
-        emit Response(startsuccess, startdata);
 
+        address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, address(usdc), 1, "", "")
+        );
+        
         // Rescindoffer should succeed only before acceptance
         (bool success, bytes memory data) = address(escrowProxy).call{value: 1, gas: 200000000}(
             abi.encodeWithSignature("rescindOffer(uint256)", 1)
         );
+        assertEq(success, true);
         emit Response(success, data);
 
-        // JoinOffer should fail if deal starter has not enough funds
-        address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
-        );
-
         vm.stopPrank();
-
-        vm.prank(executor);
-
-        // JoinOffer should fail if executor has not enough funds
-        (bool joinsuccess, bytes memory joindata) = address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("joinOffer(uint256)", 1)
-        );
-
-        emit Response(joinsuccess, joindata);
-
-        vm.prank(user);
-
-        vm.expectRevert();
-        (bool shouldfail, bytes memory faildata) = address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("rescindOffer(uint256)", 1)
-        );
-        emit Response(shouldfail, faildata);
 
     }
 
