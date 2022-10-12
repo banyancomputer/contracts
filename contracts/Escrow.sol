@@ -185,8 +185,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         // initialize proof with current block number
         _deals[offerID].dealStartBlock = block.number;
 
-        IERC20(_deals[offerID].erc20TokenDenomination).approve(msg.sender, _deals[offerID].collateral);
-
         treasury.deposit(_deals[offerID].collateral, _deals[offerID].erc20TokenDenomination, msg.sender);
 
         emit OfferJoined(offerID, msg.sender);
@@ -407,8 +405,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     function getDealStartBlock(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealStartBlock;
     }
-    function getDealStatus(uint256 _dealId) public view returns (uint8) {
-        return uint8(_deals[_dealId].offerStatus);
+    function getDealStatus(uint256 offerID) public view returns (uint8) {
+        return uint8(_deals[offerID].offerStatus);
     }
     function getDealLengthInBlocks(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealLengthInBlocks;

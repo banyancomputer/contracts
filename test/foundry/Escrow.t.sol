@@ -34,6 +34,7 @@ contract EscrowTest is BaseTest {
     TransparentUpgradeableProxy treasuryProxy;
     ProxyAdmin proxyAdmin;
     MockERC20 usdc;
+    MockERC20 weth;
 
     constructor() {
         preSetup(6);
@@ -55,6 +56,8 @@ contract EscrowTest is BaseTest {
         usdc.mint(admin, 1e20);
         usdc.mint(user, 1e20);
         usdc.mint(executor, 1e20);
+
+        weth = new MockERC20("WETH", "WETH");
 
     }
 
@@ -92,8 +95,6 @@ contract EscrowTest is BaseTest {
         treasuryImplementation = new Treasury();
 
         proxyAdmin = new ProxyAdmin();
-
-        MockERC20 weth = new MockERC20("WETH", "WETH");
 
         escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
         treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
@@ -139,25 +140,53 @@ contract EscrowTest is BaseTest {
         escrowProxy = new TransparentUpgradeableProxy(address(escrowImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address,address,address)", link, admin, address(treasuryImplementation), oracle));
         treasuryProxy = new TransparentUpgradeableProxy(address(treasuryImplementation), address(proxyAdmin), abi.encodeWithSignature("_initialize(address,address)", address(escrowImplementation), admin));
 
-        assertEq(proxyAdmin.getProxyImplementation(escrowProxy), address(escrowImplementation));
-        assertEq(proxyAdmin.getProxyImplementation(treasuryProxy), address(treasuryImplementation));
-
         vm.startPrank(user);
 
-        // JoinOffer should fail if deal starter has not enough funds
-        (bool startsuccess, bytes memory startdata) = address(escrowProxy).call{value: 1, gas: 200000000}(
-            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, 0x7af963cF6D228E564e2A0aA0DdBF06210B38615D, 1, "", "")
+        address(usdc).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("approve(address,uint256)", address(treasuryImplementation), 2)
         );
+
+        (bool startsuccess, bytes memory startdata) = address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("startOffer(address,uint256,uint256,uint256,uint256,address,uint256,string,string)", executor, 1, 1, 1, 1, address(usdc), 1, "", "")
+        );
+        assertEq(startsuccess, true);
         emit Response(startsuccess, startdata);
+
+        vm.expectEmit(true, true, false, false);
+        emit Response(true, abi.encode(1));
+        (bool returnvalueSuccess, bytes memory returnvalue) = address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("getCollateral(uint256)", 1)
+        );
+        emit Response(returnvalueSuccess, returnvalue);
         
         vm.stopPrank();
 
-        vm.startPrank(executor);
-
-        // JoinOffer should fail if executor has not enough funds
-        (bool joinsuccess, bytes memory joindata) = address(escrowProxy).call{value: 1, gas: 200000000}(
+        vm.prank(creator);
+        // JoinOffer should fail if not enough funds
+        vm.expectRevert();
+        address(escrowProxy).call{value: 0, gas: 200000000}(
             abi.encodeWithSignature("joinOffer(uint256)", 1)
         );
+
+        usdc.mint(creator, 1e20);
+
+        vm.prank(creator);
+        address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("joinOffer(uint256)", 1)
+        );
+
+        vm.startPrank(executor);
+
+        (bool allowanceSuccess, ) = address(usdc).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("approve(address,uint256)", address(treasuryImplementation), abi.decode(returnvalue, (uint)))
+        );
+        assertEq(allowanceSuccess, true);
+
+        // JoinOffer should fail if provider has not enough funds for collateral locking
+        (bool joinsuccess, bytes memory joindata) = address(escrowProxy).call{value: 0, gas: 200000000}(
+            abi.encodeWithSignature("joinOffer(uint256)", 1)
+        );
+        assertEq(joinsuccess, true);
 
         emit Response(joinsuccess, joindata);
     }
