@@ -77,8 +77,12 @@ contract Treasury is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeab
         uint256 _amount,
         address _token,        
         address _sender
-    ) external {     
-        IERC20(_token).safeTransferFrom(_sender, address(this), _amount);
+    ) external {
+        if (_token != address(0)) {
+            IERC20(_token).safeTransferFrom(_sender, address(this), _amount);
+        } else {
+            payable(msg.sender).transfer(_amount);
+        }
         emit DepositERC20(_token, _amount);
     }
 

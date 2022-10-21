@@ -20,7 +20,6 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     using Chainlink for Chainlink.Request;
 
     ITreasury public treasury;
-    address public vault;
     address public override admin;
 
     uint256 private fee;
@@ -86,10 +85,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     * @dev Sets the storage for the specified addresses
     * @param _admin Address of the Govenor contract
     * @param _link The address of the LINK token contract
-    * @param _vault The address of the Banyan vault contract
     */
 
-    function _initialize(address _link, address _admin, address _treasury, address _vault, address _oracle) public initializer()
+    function _initialize(address _link, address _admin, address _treasury, address _oracle) public initializer()
     {
         require(_admin != address(0), "0 Address Revert");
         __UUPSUpgradeable_init();
@@ -99,9 +97,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         __Ownable_init();
         
 
-        admin = msg.sender;
-        transferOwnership(_admin);
-        vault = _vault;
+        admin = _admin;
         treasury = ITreasury(_treasury);
         
         setChainlinkToken(_link);
@@ -159,9 +155,9 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _deals[_offerId].blake3Checksum = blake3;
         _deals[_offerId].creatorCounterpart.partyAddress = msg.sender;
         _deals[_offerId].providerCounterpart.partyAddress = providerAddress;
-    
-        verifyOfferIntegrity(token, bounty);
-        verifyERC20(msg.sender, token, bounty);
+
+        require(verifyOfferIntegrity(token, bounty) == true, "Deposit error");
+        require(verifyERC20(msg.sender, token, bounty) == true, "Deposit error");
 
         _deals[_offerId].creatorCounterpart.amount = bounty;
         
@@ -169,7 +165,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
         _openOffers[msg.sender].push(_offerId);
 
         // Contract creator moves funds to Treasury
-        treasury.deposit(collateral, token, msg.sender);
+        treasury.deposit(collateral + bounty, token, msg.sender);
 
         emit NewOffer(msg.sender, providerAddress, _offerId );
         return _offerId;
@@ -269,7 +265,7 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
  
      function verifyERC20 (address from, address tokenAddress, uint256 amount) internal view returns (bool){
         require(amount <= IERC20(tokenAddress).balanceOf(from), "NOT ENOUGH ERC20");
-        require(amount <= IERC20(tokenAddress).allowance(from, vault), "UNAUTHORIZED");
+        require(amount <= IERC20(tokenAddress).allowance(from, address(treasury)), "UNAUTHORIZED");
         return true;
     }
     
@@ -409,8 +405,8 @@ contract Escrow is ChainlinkClient, Initializable, ContextUpgradeable, UUPSUpgra
     function getDealStartBlock(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealStartBlock;
     }
-    function getDealStatus(uint256 _dealId) public view returns (uint8) {
-        return uint8(_deals[_dealId].offerStatus);
+    function getDealStatus(uint256 offerID) public view returns (uint8) {
+        return uint8(_deals[offerID].offerStatus);
     }
     function getDealLengthInBlocks(uint256 offerID) public view returns (uint256) {
         return _deals[offerID].dealLengthInBlocks;
